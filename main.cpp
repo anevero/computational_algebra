@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Matrix.h"
+#include "Tests/Tests.h"
 #include "Utils/DataOutput.h"
 
 int main() {

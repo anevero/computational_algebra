@@ -1,5 +1,7 @@
-#ifndef TESTS_H_
-#define TESTS_H_
+#ifndef TESTS_TESTS_H_
+#define TESTS_TESTS_H_
+
+#include <vector>
 
 #include "../Matrix.h"
 #include "../Utils/Utils.h"
@@ -18,9 +20,11 @@ void TestSystemSolution_AlmostTriangular(int number_of_tests = 500,
                                          int matrix_size = 100);
 void TestInverse_AlmostTriangular(int number_of_tests = 500,
                                   int matrix_size = 100);
+void TestInverse_TLU_AlmostTriangular(int number_of_tests = 500,
+                                  int matrix_size = 100);
 
 void TestLdl(int number_of_tests = 500, int matrix_size = 100);
 void TestSystemSolution_Symmetric(int number_of_tests = 500,
                                   int matrix_size = 100);
 
-#endif  // TESTS_H_
+#endif  // TESTS_TESTS_H_

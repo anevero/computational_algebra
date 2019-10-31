@@ -4,7 +4,7 @@ void DataOutput::Task1_RandomInput() {
   Task1<double> runner;
   auto results = runner.RandomInput();
   std::fstream out;
-  out << std::fixed << std::setprecision(5);
+  out << std::fixed << std::setprecision(7);
 
   out.open("1_time_common_f.txt");
   for (const auto& item : results) {
@@ -12,9 +12,15 @@ void DataOutput::Task1_RandomInput() {
   }
   out.close();
 
-  out.open("1_time_optimized_f.txt");
+  out.open("1_time_tlu_f.txt");
   for (const auto& item : results) {
-    out << item.time_optimized_f << ", ";
+    out << item.time_tlu_f << ", ";
+  }
+  out.close();
+
+  out.open("1_time_triangular_f.txt");
+  for (const auto& item : results) {
+    out << item.time_triangular_f << ", ";
   }
   out.close();
 
@@ -23,9 +29,16 @@ void DataOutput::Task1_RandomInput() {
     out << item.time_common_d << ", ";
   }
   out.close();
-  out.open("1_time_optimized_d.txt");
+
+  out.open("1_time_tlu_d.txt");
   for (const auto& item : results) {
-    out << item.time_optimized_d << ", ";
+    out << item.time_tlu_d << ", ";
+  }
+  out.close();
+
+  out.open("1_time_triangular_d.txt");
+  for (const auto& item : results) {
+    out << item.time_triangular_d << ", ";
   }
   out.close();
 
@@ -34,9 +47,16 @@ void DataOutput::Task1_RandomInput() {
     out << item.time_common_ld << ", ";
   }
   out.close();
-  out.open("1_time_optimized_ld.txt");
+
+  out.open("1_time_tlu_ld.txt");
   for (const auto& item : results) {
-    out << item.time_optimized_ld << ", ";
+    out << item.time_tlu_ld << ", ";
+  }
+  out.close();
+
+  out.open("1_time_triangular_ld.txt");
+  for (const auto& item : results) {
+    out << item.time_triangular_ld << ", ";
   }
   out.close();
 }
@@ -45,16 +65,28 @@ void DataOutput::Task1_SingleVsMultiThread() {
   Task1<double> runner;
   auto results = runner.SingleVsMultiThread();
   std::fstream out;
-  out << std::fixed << std::setprecision(5);
+  out << std::fixed << std::setprecision(7);
 
-  out.open("1_time_thread_single.txt");
+  out.open("1_time_thread_single_tlu.txt");
   for (auto item : std::get<0>(results)) {
     out << item << ", ";
   }
   out.close();
 
-  out.open("1_time_thread_multi.txt");
+  out.open("1_time_thread_multi_tlu.txt");
   for (auto item : std::get<1>(results)) {
+    out << item << ", ";
+  }
+  out.close();
+
+  out.open("1_time_thread_single_triangular.txt");
+  for (auto item : std::get<2>(results)) {
+    out << item << ", ";
+  }
+  out.close();
+
+  out.open("1_time_thread_multi_triangular.txt");
+  for (auto item : std::get<3>(results)) {
     out << item << ", ";
   }
   out.close();

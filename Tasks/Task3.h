@@ -1,8 +1,5 @@
-#ifndef TASK3_H_
-#define TASK3_H_
-
-#include "../Matrix.h"
-#include "../Utils/Utils.h"
+#ifndef TASKS_TASK3_H_
+#define TASKS_TASK3_H_
 
 #include <algorithm>
 #include <chrono>
@@ -13,6 +10,9 @@
 #include <tuple>
 #include <typeinfo>
 #include <vector>
+
+#include "../Matrix.h"
+#include "../Utils/Utils.h"
 
 template<class T>
 class Task3 {
@@ -81,4 +81,4 @@ auto Task3<T>::RandomInput(int number_of_tests, int max_matrix_size) {
   return std::tuple{result_tlu, result_ldl};
 }
 
-#endif  // TASK3_H_
+#endif  // TASKS_TASK3_H_

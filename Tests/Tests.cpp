@@ -7,6 +7,7 @@ void TestEverything() {
 
   TestTlu_AlmostTriangular();
   TestSystemSolution_AlmostTriangular();
+  TestInverse_TLU_AlmostTriangular();
   TestInverse_AlmostTriangular();
 
   TestLdl();
@@ -14,8 +15,8 @@ void TestEverything() {
 }
 
 void TestTlu(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v(matrix_size, std::vector<long double>(matrix_size));
+  std::vector<std::vector<double>>
+      v(matrix_size, std::vector<double>(matrix_size));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
@@ -24,7 +25,7 @@ void TestTlu(int number_of_tests, int matrix_size) {
       }
     }
 
-    Matrix<long double> m(v, 0.00001);
+    Matrix<double> m(v, 0.0001);
     m.CountTluDecomposition();
     auto mdlu =
         m.GetTInverseMatrix_TLU() * m.GetLMatrix_TLU() * m.GetUMatrix_TLU();
@@ -41,10 +42,10 @@ void TestTlu(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v1(matrix_size, std::vector<long double>(matrix_size));
-  std::vector<std::vector<long double>>
-      v2(matrix_size, std::vector<long double>(1));
+  std::vector<std::vector<double>>
+      v1(matrix_size, std::vector<double>(matrix_size));
+  std::vector<std::vector<double>>
+      v2(matrix_size, std::vector<double>(1));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
@@ -54,8 +55,8 @@ void TestSystemSolution(int number_of_tests, int matrix_size) {
       v2[i][0] = Random();
     }
 
-    Matrix<long double> a(v1, 0.0001);
-    Matrix<long double> b(v2, 0.0001);
+    Matrix<double> a(v1, 0.0001);
+    Matrix<double> b(v2, 0.0001);
     auto sol = a.SolveSystem(b);
 
     if (a * sol != b) {
@@ -73,16 +74,16 @@ void TestSystemSolution(int number_of_tests, int matrix_size) {
 }
 
 void TestInverse(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v1(matrix_size, std::vector<long double>(matrix_size));
+  std::vector<std::vector<double>>
+      v1(matrix_size, std::vector<double>(matrix_size));
 
-  std::vector<std::vector<long double>>
-      v2(matrix_size, std::vector<long double>(matrix_size, 0));
+  std::vector<std::vector<double>>
+      v2(matrix_size, std::vector<double>(matrix_size, 0));
   for (int i = 0; i < matrix_size; ++i) {
     v2[i][i] = 1;
   }
 
-  Matrix<long double> id(v2);
+  Matrix<double> id(v2);
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
@@ -91,7 +92,7 @@ void TestInverse(int number_of_tests, int matrix_size) {
       }
     }
 
-    Matrix<long double> m(v1, 0.00001);
+    Matrix<double> m(v1, 0.0001);
     m.CountInverseMatrix();
     auto inverse = m.GetInverseMatrix();
 
@@ -166,7 +167,7 @@ void TestSystemSolution_AlmostTriangular(int number_of_tests, int matrix_size) {
   std::cout << "TestSystemSolution_AlmostTriangular: completed." << std::endl;
 }
 
-void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
+void TestInverse_TLU_AlmostTriangular(int number_of_tests, int matrix_size) {
   std::vector<std::vector<long double>>
       v1(matrix_size, std::vector<long double>(matrix_size, 0));
 
@@ -190,6 +191,41 @@ void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
     auto inverse = m.GetInverseMatrix();
 
     if (m * inverse != id) {
+      std::cout << "TestInverse_TLU_AlmostTriangular: FAIL!" << std::endl;
+      std::cout << "Matrix:" << std::endl << m << std::endl;
+      std::cout << "Inverse:" << std::endl << inverse << std::endl;
+      std::cout << "Product:" << std::endl << m * inverse << std::endl;
+      return;
+    }
+  }
+
+  std::cout << "TestInverse_TLU_AlmostTriangular: completed." << std::endl;
+}
+
+void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
+  std::vector<std::vector<double>>
+      v1(matrix_size, std::vector<double>(matrix_size, 0));
+
+  std::vector<std::vector<double>>
+      v2(matrix_size, std::vector<double>(matrix_size, 0));
+  for (int i = 0; i < matrix_size; ++i) {
+    v2[i][i] = 1;
+  }
+
+  Matrix<double> id(v2, 0.0001);
+
+  for (int k = 0; k < number_of_tests; ++k) {
+    for (int i = 0; i < matrix_size; ++i) {
+      for (int j = 0; j < i + 2 && j < matrix_size; ++j) {
+        v1[i][j] = Random();
+      }
+    }
+
+    Matrix<double> m(v1, 0.0001);
+    m.CountInverseMatrix_AlmostTriangular();
+    auto inverse = m.GetInverseMatrix();
+
+    if (m * inverse != id) {
       std::cout << "TestInverse_AlmostTriangular: FAIL!" << std::endl;
       std::cout << "Matrix:" << std::endl << m << std::endl;
       std::cout << "Inverse:" << std::endl << inverse << std::endl;
@@ -202,8 +238,8 @@ void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
 }
 
 void TestLdl(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v(matrix_size, std::vector<long double>(matrix_size));
+  std::vector<std::vector<double>>
+      v(matrix_size, std::vector<double>(matrix_size));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
@@ -213,7 +249,7 @@ void TestLdl(int number_of_tests, int matrix_size) {
       }
     }
 
-    Matrix<long double> m(v, 0.0001);
+    Matrix<double> m(v, 0.0001);
     m.CountLdlDecomposition_Symmetric();
 
     auto mldl = m.GetLTMatrix_LDL().GetTranspose() * m.GetDMatrix_LDL()
@@ -232,10 +268,10 @@ void TestLdl(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v1(matrix_size, std::vector<long double>(matrix_size));
-  std::vector<std::vector<long double>>
-      v2(matrix_size, std::vector<long double>(1));
+  std::vector<std::vector<double>>
+      v1(matrix_size, std::vector<double>(matrix_size));
+  std::vector<std::vector<double>>
+      v2(matrix_size, std::vector<double>(1));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
@@ -246,8 +282,8 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
       v2[i][0] = Random();
     }
 
-    Matrix<long double> a(v1, 0.0001);
-    Matrix<long double> b(v2, 0.0001);
+    Matrix<double> a(v1, 0.0001);
+    Matrix<double> b(v2, 0.0001);
     auto sol = a.SolveSystem_Symmetric(b);
 
     if (a * sol != b) {

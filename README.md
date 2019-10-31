@@ -19,7 +19,9 @@ example, the optimized version of the TLU decomposition algorithm for the
 almost triangular matrices.
 
 C++ multithreading features are used inside some algorithms (to efficiently
-use all the computer resources).
+use all the computer resources). 
+[ThreadPool library by Robert Vaser](https://github.com/rvaser/thread_pool) is
+sometimes responsible for managing the threads.
 
 More detailed descriprion of the algorithms can be found inside source
 files (as comments) and inside the reports, which are available in the form

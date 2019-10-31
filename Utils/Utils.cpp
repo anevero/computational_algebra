@@ -7,7 +7,11 @@ std::mt19937_64 random_generator
 
 }  // namespace
 
-long double Random() {
-  return (1.0L + random_generator() % 5000
-      + 1.0L / (random_generator() % 100000));
+long double Random(int modulo, bool force_positive) {
+  long double
+      value = 1.0L + random_generator() % modulo + 1.0L / random_generator();
+  if (!force_positive && random_generator() % 2 == 1) {
+    value = -value;
+  }
+  return value;
 }
