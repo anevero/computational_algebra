@@ -12,6 +12,8 @@ void TestEverything() {
 
   TestLdl();
   TestSystemSolution_Symmetric();
+
+  TestSystemSolution_Tridiagonal();
 }
 
 void TestTlu(int number_of_tests, int matrix_size) {
@@ -298,4 +300,37 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
   }
 
   std::cout << "TestSystemSolution_Symmetric: completed." << std::endl;
+}
+
+void TestSystemSolution_Tridiagonal(int number_of_tests, int matrix_size) {
+  std::vector<std::vector<double>> v1(matrix_size, std::vector<double>(3));
+  std::vector<std::vector<double>> v2(matrix_size, std::vector<double>(1));
+
+  for (int k = 0; k < number_of_tests; ++k) {
+    for (int i = 0; i < matrix_size; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        v1[i][j] = Random();
+      }
+      v2[i][0] = Random();
+    }
+
+    Matrix<double> a(v1, 0.00001);
+    Matrix<double> b(v2, 0.00001);
+    auto sol = a.SolveSystem_Tridiagonal(b);
+
+    if (a.GetTridiagonalMatrixAsNormal() * sol != b) {
+      std::cout << "TestSystemSolution_Tridiagonal: FAIL!" << std::endl;
+      std::cout << "Matrix:" << std::endl << a.GetTridiagonalMatrixAsNormal()
+                << std::endl;
+      std::cout << "Solution:" << std::endl << sol << std::endl;
+      std::cout << "B:" << std::endl << b << std::endl;
+      std::cout << "Corresponding B:" << std::endl
+                << a.GetTridiagonalMatrixAsNormal() * sol << std::endl;
+      std::cout << "B - AX:" << std::endl
+                << b - a.GetTridiagonalMatrixAsNormal() * sol << std::endl;
+      return;
+    }
+  }
+
+  std::cout << "TestSystemSolution_Tridiagonal: completed." << std::endl;
 }

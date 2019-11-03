@@ -21,10 +21,13 @@ void TestSystemSolution_AlmostTriangular(int number_of_tests = 500,
 void TestInverse_AlmostTriangular(int number_of_tests = 500,
                                   int matrix_size = 100);
 void TestInverse_TLU_AlmostTriangular(int number_of_tests = 500,
-                                  int matrix_size = 100);
+                                      int matrix_size = 100);
 
 void TestLdl(int number_of_tests = 500, int matrix_size = 100);
 void TestSystemSolution_Symmetric(int number_of_tests = 500,
                                   int matrix_size = 100);
+
+void TestSystemSolution_Tridiagonal(int number_of_tests = 1000,
+                                    int matrix_size = 200);
 
 #endif  // TESTS_TESTS_H_

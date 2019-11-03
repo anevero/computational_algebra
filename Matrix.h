@@ -156,6 +156,22 @@ class Matrix {
   [[nodiscard]] Matrix<T> SolveSystem_Symmetric(Matrix<T> b);
 
 // ---------------------------------------------------------------------------
+// Solving systems of linear equations for the TRIDIAGONAL matrix.
+
+  // Checks if the current matrix can represent the tridiagonal matrix (i.e
+  // the current matrix has three columns).
+  bool IsTridiagonal() const;
+  // Returns the tridiagonal matrix, represented as three columns of values,
+  // in the normal square matrix representation.
+  [[nodiscard]] Matrix<T> GetTridiagonalMatrixAsNormal() const;
+  // Returns N*1 matrix, which is the solution of AX = b system. b should be
+  // N*1 matrix, where N is equal to the number of columns in A matrix.
+  // 'this' is used as A matrix.
+  // Uses tridiagonal matrices properties  for solving the system.
+  // Time complexity: O(n).
+  [[nodiscard]] Matrix<T> SolveSystem_Tridiagonal(Matrix<T> b) const;
+
+// ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition,
 // counting the inverse matrix and the condition number.
 
@@ -882,6 +898,10 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
   // Takes O(n^2) time.
   for (int i = 0; i < size; ++i) {
     // Working with i-th column.
+    if (LT_matrix_LDL_[i][i] == 0) {
+      throw std::runtime_error(
+          "This algorithm cannot be applied to this matrix.");
+    }
     b.matrix_[i][0] /= LT_matrix_LDL_[i][i];
     for (int j = i + 1; j < size; ++j) {
       b.matrix_[j][0] -= b.matrix_[i][0] * LT_matrix_LDL_[i][j];
@@ -905,6 +925,63 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
 
   return b;
 }
+
+// ---------------------------------------------------------------------------
+// Solving systems of linear equations for the TRIDIAGONAL matrix.
+
+template<class T>
+bool Matrix<T>::IsTridiagonal() const {
+  return (columns_ == 3);
+}
+
+template<class T>
+Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
+  std::vector<std::vector<T>> result(rows_, std::vector<T>(rows_, 0));
+  for (int i = 0; i < rows_; ++i) {
+    if (i != 0) {
+      result[i][i - 1] = matrix_[i][0];
+    }
+    result[i][i] = matrix_[i][1];
+    if (i != rows_ - 1) {
+      result[i][i + 1] = matrix_[i][2];
+    }
+  }
+  return Matrix(result);
+}
+
+template<class T>
+Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
+  if (rows_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
+    throw std::invalid_argument("B is not a proper vector for this matrix.");
+  }
+
+  // Creating current matrix copy for storing temporary values.
+  auto matrix = matrix_;
+
+  // Going right and down.
+  for (int i = 1; i < rows_; ++i) {
+    if (matrix[i - 1][1] == 0) {
+      throw std::runtime_error(
+          "This algorithm cannot be applied to this matrix.");
+    }
+    auto multiplier = (-1) * matrix[i][0] / matrix[i - 1][1];
+    matrix[i][1] += matrix[i - 1][2] * multiplier;
+    b.matrix_[i][0] += b.matrix_[i - 1][0] * multiplier;
+    matrix[i][0] = 0;
+  }
+
+  // Going left and up.
+  for (int i = rows_ - 1; i > 0; --i) {
+    b.matrix_[i][0] /= matrix[i][1];
+    b.matrix_[i - 1][0] -= matrix[i - 1][2] * b.matrix_[i][0];
+    matrix[i][1] = 1;
+    matrix[i - 1][2] = 0;
+  }
+  b.matrix_[0][0] /= matrix[0][1];
+
+  return b;
+}
+
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, counting the inverse matrix
