@@ -189,7 +189,7 @@ void TestInverse_TLU_AlmostTriangular(int number_of_tests, int matrix_size) {
     }
 
     Matrix<long double> m(v1, 0.000001);
-    m.CountInverseMatrix_AlmostTriangular();
+    m.CountInverseMatrix_AlmostTriangular_Tlu();
     auto inverse = m.GetInverseMatrix();
 
     if (m * inverse != id) {

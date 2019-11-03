@@ -15,4 +15,5 @@ set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-no-pie ${THREADS_OPTION}"
 add_executable(cma main.cpp Matrix.h
         Tests/Tests.h Tests/Tests.cpp
         Tasks/Task1.h Tasks/Task2.h Tasks/Task3.h Tasks/Task4.h
-        Utils/Utils.cpp Utils/Utils.h Utils/DataOutput.cpp Utils/DataOutput.h)
+        Utils/Utils.cpp Utils/Utils.h Utils/DataOutput.cpp Utils/DataOutput.h
+        Utils/ThreadPool.cpp Utils/ThreadPool.h)

@@ -13,10 +13,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <condition_variable>
 #include <future>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -24,6 +26,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "Utils/ThreadPool.h"
 
 template<class T>
 class Matrix {
@@ -130,6 +134,8 @@ class Matrix {
   // lower-triangular and counts the inverse. Overall time complexity is
   // O(n^3).
   void CountInverseMatrix_AlmostTriangular();
+  // The same as previous, but uses only one thread.
+  void CountInverseMatrix_AlmostTriangular_SingleThread();
 
 // ---------------------------------------------------------------------------
 // LDL decomposition, solving systems of linear equations for the SYMMETRIC
@@ -753,6 +759,93 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
 
 template<class T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
+  int size = rows_;
+  auto a_matrix = matrix_;
+  inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
+  for (int i = 0; i < size; ++i) {
+    inverse_matrix_[i][i] = 1;
+  }
+
+  // Making the matrix lower-triangular.
+  for (int i = size - 1; i > 0; --i) {
+    if (std::abs(a_matrix[i][i]) < epsilon_) {
+      throw std::runtime_error("Optimized algorithm cannot be applied to "
+                               "this matrix.");
+    }
+
+    auto multiplier = (-1) * a_matrix[i - 1][i] / a_matrix[i][i];
+    for (int j = 0; j <= i; ++j) {
+      a_matrix[i - 1][j] += multiplier * a_matrix[i][j];
+    }
+    for (int j = i; j < size; ++j) {
+      inverse_matrix_[i - 1][j] += multiplier * inverse_matrix_[i][j];
+    }
+  }
+
+  if (std::abs(a_matrix[0][0]) < epsilon_) {
+    throw std::runtime_error("Optimized algorithm cannot be applied to "
+                             "this matrix.");
+  }
+
+  // Creating the pool of threads for further use (they will be used to
+  // subtract the rows of the matrices in a more efficient way).
+  int number_of_threads = static_cast<int>(std::thread::hardware_concurrency());
+  number_of_threads = (number_of_threads == 0) ? 8 : number_of_threads;
+  auto thread_pool = ThreadPool(number_of_threads);
+  thread_pool.StartWorkers();
+
+  int rows_completed = rows_;
+  std::mutex rows_completed_mutex;
+  std::condition_variable rows_completed_cv;
+
+  // Subtracting the rows from the every row below using multithreading
+  // (different rows of the matrix are processed by different threads).
+  for (int i = 0; i < size; ++i) {
+    std::unique_lock<std::mutex> locker(rows_completed_mutex);
+    rows_completed_cv.wait(locker, [this, &rows_completed]() {
+      return (rows_completed == rows_);
+    });
+    rows_completed = i + 1;
+
+    int current_row = i + 1;
+    int rows_remaining = size - i - 1;
+    int rows_per_thread;
+    std::mutex mutex;
+
+    for (int j = 0; j < number_of_threads; ++j) {
+      rows_per_thread = rows_remaining / (number_of_threads - j);
+      if (rows_per_thread == 0) continue;
+      thread_pool.Schedule(
+          [this, &a_matrix, current_row, rows_per_thread, size, i,
+              &rows_completed, &mutex, &rows_completed_cv]() {
+            for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+              auto multiplier = a_matrix[k][i] / a_matrix[i][i];
+              for (int l = 0; l < size; ++l) {
+                inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
+              }
+            }
+            mutex.lock();
+            rows_completed += rows_per_thread;
+            mutex.unlock();
+            rows_completed_cv.notify_all();
+          });
+      current_row += rows_per_thread;
+      rows_remaining -= rows_per_thread;
+    }
+  }
+
+  // Dividing the rows by the diagonal elements.
+  for (int i = 0; i < size; ++i) {
+    thread_pool.Schedule([this, &a_matrix, size, i]() {
+      for (int j = 0; j < size; ++j) {
+        inverse_matrix_[i][j] /= a_matrix[i][i];
+      }
+    });
+  }
+}
+
+template<class T>
+void Matrix<T>::CountInverseMatrix_AlmostTriangular_SingleThread() {
   int size = rows_;
   auto a_matrix = matrix_;
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
