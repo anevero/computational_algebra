@@ -10,7 +10,7 @@ several linear algebra algorithms, in particular:
 * Arithmetic operators (including counting the product of matrices).
 * TLU decomposition (T stands for the rows permutations) for any square 
 non-singular matrix.
-* LDL decomposition for square symmetric matriсes.
+* LDL decomposition for square symmetric matrices.
 * Solving the systems of the linear equations using TLU / LDL decomposition.
 * Counting the inverse matrix using TLU decomposition.
 
@@ -19,10 +19,10 @@ example, the optimized version of the TLU decomposition algorithm for the
 almost triangular matrices.
 
 C++ multithreading features are used inside some algorithms (to efficiently
-use all the computer resources). 
-[ThreadPool library by Robert Vaser](https://github.com/rvaser/thread_pool) is
+use all the computer resources). [ThreadPool library by Google](
+https://github.com/google/or-tools/blob/v7.4/ortools/base/threadpool.h) is
 sometimes responsible for managing the threads.
 
-More detailed descriprion of the algorithms can be found inside source
+More detailed description of the algorithms can be found inside source
 files (as comments) and inside the reports, which are available in the form
 of Jupyter Notebooks (the Russian language is used there).

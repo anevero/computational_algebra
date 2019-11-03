@@ -819,6 +819,11 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
           [this, &a_matrix, current_row, rows_per_thread, size, i,
               &rows_completed, &mutex, &rows_completed_cv]() {
             for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+              if (std::abs(a_matrix[i][i]) < epsilon_) {
+                throw std::runtime_error(
+                    "Optimized algorithm cannot be applied to "
+                    "this matrix.");
+              }
               auto multiplier = a_matrix[k][i] / a_matrix[i][i];
               for (int l = 0; l < size; ++l) {
                 inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
@@ -991,7 +996,7 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
   // Takes O(n^2) time.
   for (int i = 0; i < size; ++i) {
     // Working with i-th column.
-    if (LT_matrix_LDL_[i][i] == 0) {
+    if (std::abs(LT_matrix_LDL_[i][i]) < epsilon_) {
       throw std::runtime_error(
           "This algorithm cannot be applied to this matrix.");
     }
@@ -1053,7 +1058,7 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
   // Going right and down.
   for (int i = 1; i < rows_; ++i) {
-    if (matrix[i - 1][1] == 0) {
+    if (std::abs(matrix[i - 1][1]) < epsilon_) {
       throw std::runtime_error(
           "This algorithm cannot be applied to this matrix.");
     }
