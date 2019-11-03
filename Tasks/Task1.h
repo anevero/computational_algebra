@@ -237,7 +237,6 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
   std::vector<double> result_tlu_single_thread{};
   std::vector<double> result_tlu_multi_thread{};
   std::vector<double> result_triangular_single_thread{};
-  std::vector<double> result_triangular_multi_thread{};
 
   for (int size = 500; size <= max_matrix_size; size += 500) {
     std::cout << "Current size: " << size << std::endl;
@@ -257,7 +256,6 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
     Matrix d_single_thread_tlu(d_vector);
     Matrix d_multi_thread_tlu(d_vector);
     Matrix d_single_thread_triangular(d_vector);
-    Matrix d_multi_thread_triangular(d_vector);
 
     auto t1_single_thread_tlu = std::chrono::high_resolution_clock::now();
     d_single_thread_tlu.CountInverseMatrix_AlmostTriangular_Tlu_SingleThread();
@@ -269,13 +267,9 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
 
     auto
         t1_single_thread_triangular = std::chrono::high_resolution_clock::now();
-    d_single_thread_triangular.CountInverseMatrix_AlmostTriangular_SingleThread();
+    d_single_thread_triangular.CountInverseMatrix_AlmostTriangular();
     auto
         t2_single_thread_triangular = std::chrono::high_resolution_clock::now();
-
-    auto t1_multi_thread_triangular = std::chrono::high_resolution_clock::now();
-    d_multi_thread_triangular.CountInverseMatrix_AlmostTriangular();
-    auto t2_multi_thread_triangular = std::chrono::high_resolution_clock::now();
 
     auto time_single_thread_tlu =
         std::chrono::duration_cast<std::chrono::microseconds>(
@@ -283,23 +277,18 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
     auto time_multi_thread_tlu =
         std::chrono::duration_cast<std::chrono::microseconds>(
             t2_multi_thread_tlu - t1_multi_thread_tlu).count();
-
     auto time_single_thread_triangular =
         std::chrono::duration_cast<std::chrono::microseconds>(
             t2_single_thread_triangular - t1_single_thread_triangular).count();
-    auto time_multi_thread_triangular =
-        std::chrono::duration_cast<std::chrono::microseconds>(
-            t2_multi_thread_triangular - t1_multi_thread_triangular).count();
 
     result_tlu_single_thread.push_back(time_single_thread_tlu);
     result_tlu_multi_thread.push_back(time_multi_thread_tlu);
     result_triangular_single_thread.push_back(time_single_thread_triangular);
-    result_triangular_multi_thread.push_back(time_multi_thread_triangular);
   }
 
-  return std::tuple{result_tlu_single_thread, result_tlu_multi_thread,
-                    result_triangular_single_thread,
-                    result_triangular_multi_thread};
+  return std::tuple{result_tlu_single_thread,
+                    result_tlu_multi_thread,
+                    result_triangular_single_thread};
 }
 
 template<class T>

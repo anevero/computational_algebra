@@ -84,12 +84,6 @@ void DataOutput::Task1_SingleVsMultiThread() {
     out << item << ", ";
   }
   out.close();
-
-  out.open("1_time_thread_multi_triangular.txt");
-  for (auto item : std::get<3>(results)) {
-    out << item << ", ";
-  }
-  out.close();
 }
 
 void DataOutput::Task2_RandomBForSecondMatrix() {
