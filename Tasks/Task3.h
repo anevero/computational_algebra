@@ -17,7 +17,7 @@
 template<class T>
 class Task3 {
  public:
-  [[nodiscard]] static auto RandomInput(int number_of_tests = 5,
+  [[nodiscard]] static auto RandomInput(int number_of_tests = 3,
                                         int max_matrix_size = 2000);
 };
 

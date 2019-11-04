@@ -34,8 +34,8 @@ class Task1 {
   static void FirstMatrix();
   static void SecondMatrix();
   [[nodiscard]] static std::vector<Task1_Data> RandomInput(
-      int max_matrix_size = 3000);
-  [[nodiscard]] static auto SingleVsMultiThread(int max_matrix_size = 5000);
+      int max_matrix_size = 2100);
+  [[nodiscard]] static auto SingleVsMultiThread(int max_matrix_size = 3000);
   [[nodiscard]] static auto TimeForAlmostTriangularMatrix(int matrix_size);
 };
 
@@ -146,12 +146,12 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
     Matrix f_common(f_vector);
     Matrix f_tlu(f_vector);
     Matrix f_triangular(f_vector);
-    Matrix d_common(f_vector);
-    Matrix d_tlu(f_vector);
-    Matrix d_triangular(f_vector);
-    Matrix ld_common(f_vector);
-    Matrix ld_tlu(f_vector);
-    Matrix ld_triangular(f_vector);
+    Matrix d_common(d_vector);
+    Matrix d_tlu(d_vector);
+    Matrix d_triangular(d_vector);
+    Matrix ld_common(ld_vector);
+    Matrix ld_tlu(ld_vector);
+    Matrix ld_triangular(ld_vector);
 
     auto t1_common_f = std::chrono::high_resolution_clock::now();
     f_common.CountInverseMatrix();

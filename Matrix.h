@@ -797,22 +797,23 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
   thread_pool.StartWorkers();
 
   int rows_completed = rows_;
-  std::mutex rows_completed_mutex;
+  std::mutex mutex;
   std::condition_variable rows_completed_cv;
 
   // Subtracting the rows from the every row below using multithreading
   // (different rows of the matrix are processed by different threads).
   for (int i = 0; i < size; ++i) {
-    std::unique_lock<std::mutex> locker(rows_completed_mutex);
+    // Lock the thread until all the subtraction operations from the previous
+    // iterations won't be completed.
+    std::unique_lock<std::mutex> locker(mutex);
     rows_completed_cv.wait(locker, [this, &rows_completed]() {
       return (rows_completed == rows_);
     });
-    rows_completed = i + 1;
 
+    rows_completed = i + 1;
     int current_row = i + 1;
     int rows_remaining = size - i - 1;
     int rows_per_thread;
-    std::mutex mutex;
 
     for (int j = 0; j < number_of_threads; ++j) {
       rows_per_thread = rows_remaining / (number_of_threads - j);
@@ -831,17 +832,19 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
                 inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
               }
             }
-            mutex.lock();
-            rows_completed += rows_per_thread;
-            mutex.unlock();
-            rows_completed_cv.notify_all();
+            {
+              std::lock_guard<std::mutex> locker(mutex);
+              rows_completed += rows_per_thread;
+              rows_completed_cv.notify_all();
+            }
           });
       current_row += rows_per_thread;
       rows_remaining -= rows_per_thread;
     }
   }
 
-  // Dividing the rows by the diagonal elements.
+  // Dividing the rows by the diagonal elements. Here we don't need to lock
+  // the thread, because all the division operations can be done independently.
   for (int i = 0; i < size; ++i) {
     thread_pool.Schedule([this, &a_matrix, size, i]() {
       for (int j = 0; j < size; ++j) {

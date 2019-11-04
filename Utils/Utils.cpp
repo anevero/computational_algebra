@@ -2,8 +2,8 @@
 
 namespace {
 
-std::mt19937_64 random_generator
-    (std::chrono::system_clock::now().time_since_epoch().count());
+// Constant seed is used to make the results of the tests more predictable.
+std::mt19937_64 random_generator(42);
 
 }  // namespace
 
