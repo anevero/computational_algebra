@@ -146,6 +146,7 @@ class Matrix {
   // Returns the transpose of the current matrix. Its generation takes O(n^2)
   // time.
   [[nodiscard]] Matrix<T> GetTranspose() const;
+
   // Counts LDL decomposition of the symmetric matrix (using square roots
   // algorithm).
   // No elements are chosen as main, because it will break the structure of the
@@ -170,6 +171,7 @@ class Matrix {
   // Returns the tridiagonal matrix, represented as three columns of values,
   // in the normal square matrix representation.
   [[nodiscard]] Matrix<T> GetTridiagonalMatrixAsNormal() const;
+
   // Returns N*1 matrix, which is the solution of AX = b system. b should be
   // N*1 matrix, where N is equal to the number of columns in A matrix.
   // 'this' is used as A matrix.
@@ -205,7 +207,7 @@ class Matrix {
   T epsilon_;
 
 // ---------------------------------------------------------------------------
-// Variables, connected with TLU decomposition.
+// Variables connected with TLU decomposition.
 
   std::vector<std::vector<T>> L_matrix_TLU_{};
   std::vector<std::vector<T>> U_matrix_TLU_{};
@@ -219,7 +221,7 @@ class Matrix {
   std::vector<T> T_inverse_matrix_TLU_{};
 
 // ---------------------------------------------------------------------------
-// Variables, connected with LDL decomposition.
+// Variables connected with LDL decomposition.
 
   std::vector<std::vector<T>> LT_matrix_LDL_{};
   // To save the memory, this matrix is stored as a single-dimensional vector.
@@ -227,7 +229,7 @@ class Matrix {
   std::vector<T> D_matrix_LDL_{};
 
 // ---------------------------------------------------------------------------
-// Results of applying decomposition algorithms.
+// Results of applying different algorithms.
 
   std::vector<std::vector<T>> inverse_matrix_{};
   std::optional<T> condition_number_ = std::nullopt;

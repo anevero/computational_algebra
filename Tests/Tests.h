@@ -1,9 +1,12 @@
 #ifndef TESTS_TESTS_H_
 #define TESTS_TESTS_H_
 
+#include <chrono>
+#include <random>
 #include <vector>
 
 #include "../Matrix.h"
+#include "../Tasks/Task5.h"
 #include "../Utils/Utils.h"
 
 // These tests should be run manually. Some of them can fail (it's expected
@@ -29,5 +32,7 @@ void TestSystemSolution_Symmetric(int number_of_tests = 500,
 
 void TestSystemSolution_Tridiagonal(int number_of_tests = 1000,
                                     int matrix_size = 200);
+
+void TestSystemSolution_Sor(int number_of_tests = 200);
 
 #endif  // TESTS_TESTS_H_

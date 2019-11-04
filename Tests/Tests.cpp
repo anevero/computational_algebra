@@ -14,6 +14,8 @@ void TestEverything() {
   TestSystemSolution_Symmetric();
 
   TestSystemSolution_Tridiagonal();
+
+  TestSystemSolution_Sor();
 }
 
 void TestTlu(int number_of_tests, int matrix_size) {
@@ -333,4 +335,29 @@ void TestSystemSolution_Tridiagonal(int number_of_tests, int matrix_size) {
   }
 
   std::cout << "TestSystemSolution_Tridiagonal: completed." << std::endl;
+}
+
+void TestSystemSolution_Sor(int number_of_tests) {
+  std::mt19937_64 random_generator
+      (std::chrono::system_clock::now().time_since_epoch().count());
+
+  for (int i = 0; i < number_of_tests; ++i) {
+    int n = 1 + static_cast<int>(random_generator() % 3000);
+    auto x = Task5<double>::SolveSystem(n);
+    auto b = Task5<double>::GetAMatrix(n) * x.matrix;
+
+    std::vector<std::vector<double>> id_vector(n, std::vector<double>(1, 1));
+    Matrix id(id_vector);
+
+    if (b != id) {
+      std::cout << "TestSystemSolution_Sor: FAIL!" << std::endl;
+      std::cout << "n:" << std::endl << n << std::endl;
+      std::cout << "Solution:" << std::endl << x.matrix << std::endl;
+      std::cout << "b:" << std::endl << b << std::endl;
+      std::cout << "id - AX:" << std::endl << id - b << std::endl;
+      return;
+    }
+  }
+
+  std::cout << "TestSystemSolution_Sor: completed." << std::endl;
 }

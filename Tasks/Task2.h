@@ -17,9 +17,9 @@
 template<class T>
 class Task2 {
  public:
-  void FirstMatrix();
-  void SecondMatrix();
-  [[nodiscard]] auto RandomBForSecondMatrix(int number_of_tests = 250);
+  static void FirstMatrix();
+  static void SecondMatrix();
+  [[nodiscard]] static auto RandomBForSecondMatrix(int number_of_tests = 250);
 };
 
 template<class T>

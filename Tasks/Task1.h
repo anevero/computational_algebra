@@ -32,11 +32,12 @@ class Task1 {
     double time_triangular_ld;
   };
 
-  void FirstMatrix();
-  void SecondMatrix();
-  [[nodiscard]] std::vector<Task1_Data> RandomInput(int max_matrix_size = 3000);
-  [[nodiscard]] auto SingleVsMultiThread(int max_matrix_size = 5000);
-  [[nodiscard]] auto TimeForAlmostTriangularMatrix(int matrix_size);
+  static void FirstMatrix();
+  static void SecondMatrix();
+  [[nodiscard]] static std::vector<Task1_Data> RandomInput(
+      int max_matrix_size = 3000);
+  [[nodiscard]] static auto SingleVsMultiThread(int max_matrix_size = 5000);
+  [[nodiscard]] static auto TimeForAlmostTriangularMatrix(int matrix_size);
 };
 
 template<class T>
@@ -143,7 +144,6 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
       }
     }
 
-    // Creating pairs of matrices for common and optimized algorithm.
     Matrix f_common(f_vector);
     Matrix f_tlu(f_vector);
     Matrix f_triangular(f_vector);

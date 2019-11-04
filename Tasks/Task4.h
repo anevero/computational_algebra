@@ -18,8 +18,8 @@
 template<class T>
 class Task4 {
  public:
-  void FirstMatrix();
-  void SecondMatrix();
+  static void FirstMatrix();
+  static void SecondMatrix();
 };
 
 template<class T>
