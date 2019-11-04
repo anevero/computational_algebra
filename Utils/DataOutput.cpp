@@ -1,8 +1,7 @@
 #include "DataOutput.h"
 
 void DataOutput::Task1_RandomInput() {
-  Task1<double> runner;
-  auto results = runner.RandomInput();
+  auto results = Task1<double>::RandomInput();
   std::fstream out;
   out << std::fixed << std::setprecision(7);
 
@@ -62,8 +61,7 @@ void DataOutput::Task1_RandomInput() {
 }
 
 void DataOutput::Task1_SingleVsMultiThread() {
-  Task1<double> runner;
-  auto results = runner.SingleVsMultiThread();
+  auto results = Task1<double>::SingleVsMultiThread();
   std::fstream out;
   out << std::fixed << std::setprecision(7);
 
@@ -87,8 +85,7 @@ void DataOutput::Task1_SingleVsMultiThread() {
 }
 
 void DataOutput::Task2_RandomBForSecondMatrix() {
-  Task2<double> runner;
-  auto results = runner.RandomBForSecondMatrix();
+  auto results = Task2<double>::RandomBForSecondMatrix();
   std::fstream out;
   out << std::fixed << std::setprecision(10);
 
@@ -112,8 +109,7 @@ void DataOutput::Task2_RandomBForSecondMatrix() {
 }
 
 void DataOutput::Task3_RandomInput() {
-  Task3<double> runner;
-  auto results = runner.RandomInput();
+  auto results = Task3<double>::RandomInput();
   std::fstream out;
   out << std::fixed << std::setprecision(5);
 
@@ -128,4 +124,17 @@ void DataOutput::Task3_RandomInput() {
     out << item << ", ";
   }
   out.close();
+}
+
+void DataOutput::Task5_DifferentOmegas() {
+  auto result = Task5<double>::GetTime(0.8, 1.2);
+  std::fstream out;
+
+  for (int i = 0; i < 3; ++i) {
+    out.open("5_omega" + std::to_string(i) + ".txt");
+    for (auto item : result[i]) {
+      out << item << ", ";
+    }
+    out.close();
+  }
 }

@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
-#include <fstream>
 #include <limits>
 #include <random>
 #include <stdexcept>

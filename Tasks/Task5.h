@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 #include "../Matrix.h"
 
@@ -17,9 +18,11 @@ class Task5 {
     T last_x;
   };
 
-  [[nodiscard]] static Task5Data SolveSystem(int n, T omega = 2.0,
+  [[nodiscard]] static Task5Data SolveSystem(int n, T omega = 1.0,
                                              T epsilon = 1e-10);
   [[nodiscard]] static Matrix<T> GetAMatrix(int n);
+  [[nodiscard]] static std::vector<std::vector<int>> GetTime(T min_omega,
+                                                             T max_omega);
 };
 
 template<class T>
@@ -79,6 +82,27 @@ Matrix<T> Task5<T>::GetAMatrix(int n) {
     result[i][i] = n;
   }
   return Matrix(result);
+}
+
+template<class T>
+std::vector<std::vector<int>> Task5<T>::GetTime(T min_omega, T max_omega) {
+  std::vector<T> omegas(3);
+  omegas[0] = min_omega;
+  omegas[1] = (min_omega + max_omega) / 2;
+  omegas[2] = max_omega;
+  std::vector<std::vector<int>> result;
+  std::vector<int> current_result;
+
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 50; j <= 4000; j += 50) {
+      auto x = Task5<T>::SolveSystem(j, omegas[i]);
+      current_result.push_back(x.number_of_iterations);
+    }
+    result.push_back(current_result);
+    current_result.clear();
+  }
+
+  return result;
 }
 
 #endif  // TASKS_TASK5_H_

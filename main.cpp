@@ -10,6 +10,7 @@ int main() {
 //  DataOutput::Task1_SingleVsMultiThread();
 //  DataOutput::Task2_RandomBForSecondMatrix();
 //  DataOutput::Task3_RandomInput();
+//  DataOutput::Task5_DifferentOmegas();
 
   return 0;
 }
