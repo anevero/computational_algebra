@@ -27,7 +27,7 @@ void RunWorker(void* data) {
   }
 }
 
-}
+}  // namespace
 
 ThreadPool::ThreadPool(int num_workers) : num_workers_(num_workers) {}
 
