@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <string>
 #include <tuple>
 
 #include "../Tasks/Task1.h"

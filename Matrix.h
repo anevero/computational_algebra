@@ -847,15 +847,25 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
     }
   }
 
-  // Dividing the rows by the diagonal elements. Here we don't need to lock
-  // the thread, because all the division operations can be done independently.
-  for (int i = 0; i < size; ++i) {
-    thread_pool.Schedule([this, &a_matrix, size, i]() {
-      auto multiplier = a_matrix[i][i];
-      for (int j = 0; j < size; ++j) {
-        inverse_matrix_[i][j] /= multiplier;
-      }
-    });
+  // Dividing the rows by the diagonal elements.
+  int rows_per_thread;
+  int current_row = 0;
+  int rows_remaining = size;
+
+  for (int i = 0; i < number_of_threads; ++i) {
+    rows_per_thread = rows_remaining / (number_of_threads - i);
+    if (rows_per_thread == 0) continue;
+    thread_pool.Schedule(
+        [this, &a_matrix, current_row, rows_per_thread, size]() {
+          for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+            auto multiplier = a_matrix[k][k];
+            for (int j = 0; j < size; ++j) {
+              inverse_matrix_[k][j] /= multiplier;
+            }
+          }
+        });
+    current_row += rows_per_thread;
+    rows_remaining -= rows_per_thread;
   }
 }
 
