@@ -164,11 +164,13 @@ class Matrix {
 
 // ---------------------------------------------------------------------------
 // Solving systems of linear equations for the TRIDIAGONAL matrix.
+// Tridiagonal matrix representation must include four columns (the first
+// column is the element to the left from the main diagonal, and so on).
 
   // Checks if the current matrix can represent the tridiagonal matrix (i.e
-  // the current matrix has three columns).
+  // the current matrix has four columns).
   bool IsTridiagonal() const;
-  // Returns the tridiagonal matrix, represented as three columns of values,
+  // Returns the tridiagonal matrix, represented as four columns of values,
   // in the normal square matrix representation.
   [[nodiscard]] Matrix<T> GetTridiagonalMatrixAsNormal() const;
 
@@ -1034,7 +1036,7 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
 
 template<class T>
 bool Matrix<T>::IsTridiagonal() const {
-  return (columns_ == 3);
+  return (columns_ == 4);
 }
 
 template<class T>
@@ -1047,6 +1049,9 @@ Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
     result[i][i] = matrix_[i][1];
     if (i != rows_ - 1) {
       result[i][i + 1] = matrix_[i][2];
+    }
+    if (i != rows_ - 2 && i != rows_ - 1) {
+      result[i][i + 2] = matrix_[i][3];
     }
   }
   return Matrix(result);
@@ -1062,29 +1067,46 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
   auto matrix = matrix_;
 
   // Going right and down.
-  for (int i = 1; i < rows_; ++i) {
-    if (std::abs(matrix[i - 1][1]) < epsilon_) {
+  for (int i = 0; i < rows_ - 1; ++i) {
+    // Swapping rows. Assuming that at the moment the fourth element of the
+    // (i+1)th row is equal to zero.
+    if (std::abs(matrix[i][1]) < std::abs(matrix[i + 1][0])) {
+      std::swap(matrix[i][1], matrix[i + 1][0]);
+      std::swap(matrix[i][2], matrix[i + 1][1]);
+      std::swap(matrix[i][3], matrix[i + 1][2]);
+      b.matrix_[i].swap(b.matrix_[i + 1]);
+    }
+
+    if (std::abs(matrix[i][1]) < epsilon_) {
       throw std::runtime_error(
           "This algorithm cannot be applied to this matrix.");
     }
-    auto multiplier = (-1) * matrix[i][0] / matrix[i - 1][1];
-    matrix[i][1] += matrix[i - 1][2] * multiplier;
-    b.matrix_[i][0] += b.matrix_[i - 1][0] * multiplier;
-    matrix[i][0] = 0;
+
+    auto multiplier = (-1) * matrix[i + 1][0] / matrix[i][1];
+    matrix[i + 1][0] = 0;
+    matrix[i + 1][1] += multiplier * matrix[i][2];
+    matrix[i + 1][2] += multiplier * matrix[i][3];
+    b.matrix_[i + 1][0] += multiplier * b.matrix_[i][0];
   }
 
-  // Going left and up.
-  for (int i = rows_ - 1; i > 0; --i) {
-    b.matrix_[i][0] /= matrix[i][1];
-    b.matrix_[i - 1][0] -= matrix[i - 1][2] * b.matrix_[i][0];
-    matrix[i][1] = 1;
-    matrix[i - 1][2] = 0;
+  if (std::abs(matrix[rows_ - 1][1]) < epsilon_) {
+    throw std::runtime_error(
+        "This algorithm cannot be applied to this matrix.");
   }
-  b.matrix_[0][0] /= matrix[0][1];
+
+  // Going up.
+  for (int i = rows_ - 1; i >= 0; --i) {
+    b.matrix_[i][0] /= matrix[i][1];
+    if (i > 0) {
+      b.matrix_[i - 1][0] -= matrix[i - 1][2] * b.matrix_[i][0];
+    }
+    if (i > 1) {
+      b.matrix_[i - 2][0] -= matrix[i - 2][3] * b.matrix_[i][0];
+    }
+  }
 
   return b;
 }
-
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, counting the inverse matrix

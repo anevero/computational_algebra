@@ -305,7 +305,7 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution_Tridiagonal(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<double>> v1(matrix_size, std::vector<double>(3));
+  std::vector<std::vector<double>> v1(matrix_size, std::vector<double>(4));
   std::vector<std::vector<double>> v2(matrix_size, std::vector<double>(1));
 
   for (int k = 0; k < number_of_tests; ++k) {
@@ -313,6 +313,7 @@ void TestSystemSolution_Tridiagonal(int number_of_tests, int matrix_size) {
       for (int j = 0; j < 3; ++j) {
         v1[i][j] = Random();
       }
+      v1[i][3] = 0;
       v2[i][0] = Random();
     }
 

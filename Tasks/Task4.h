@@ -29,13 +29,14 @@ void Task4<T>::FirstMatrix() {
   std::fstream in("../input_files/task4_input1");
   int size;
   in >> size;
-  std::vector<std::vector<T>> a_vector(size, std::vector<T>(3));
+  std::vector<std::vector<T>> a_vector(size, std::vector<T>(4));
   std::vector<std::vector<T>> b_vector(size, std::vector<T>(1));
 
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < 3; ++j) {
       in >> a_vector[i][j];
     }
+    a_vector[i][3] = 0;
   }
 
   for (int i = 0; i < size; ++i) {
@@ -69,13 +70,14 @@ void Task4<T>::SecondMatrix() {
   std::fstream in("../input_files/task4_input2");
   int size;
   in >> size;
-  std::vector<std::vector<T>> a_vector(size, std::vector<T>(3));
+  std::vector<std::vector<T>> a_vector(size, std::vector<T>(4));
   std::vector<std::vector<T>> b_vector(size, std::vector<T>(1));
 
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < 3; ++j) {
       in >> a_vector[i][j];
     }
+    a_vector[i][3] = 0;
   }
 
   for (int i = 0; i < size; ++i) {
