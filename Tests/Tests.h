@@ -12,6 +12,8 @@
 // These tests should be run manually. Some of them can fail (it's expected
 // behaviour), so you'll need to check the failure message.
 
+namespace matrix::matrix_tests {
+
 void TestEverything();
 
 void TestTlu(int number_of_tests = 500, int matrix_size = 100);
@@ -34,5 +36,7 @@ void TestSystemSolution_Tridiagonal(int number_of_tests = 1000,
                                     int matrix_size = 200);
 
 void TestSystemSolution_Sor(int number_of_tests = 200);
+
+}  // namespace matrix::matrix_tests
 
 #endif  // TESTS_TESTS_H_

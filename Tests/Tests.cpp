@@ -1,5 +1,9 @@
 #include "Tests.h"
 
+namespace matrix::matrix_tests {
+
+using matrix_utils::Random;
+
 void TestEverything() {
   TestTlu();
   TestSystemSolution();
@@ -288,16 +292,19 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
 
     Matrix<double> a(v1, 0.0001);
     Matrix<double> b(v2, 0.0001);
-    auto sol = a.SolveSystem_Symmetric(b);
-
-    if (a * sol != b) {
-      std::cout << "TestSystemSolution_Symmetric: FAIL!" << std::endl;
-      std::cout << "Matrix:" << std::endl << a << std::endl;
-      std::cout << "Solution:" << std::endl << sol << std::endl;
-      std::cout << "B:" << std::endl << b << std::endl;
-      std::cout << "Corresponding B:" << std::endl << a * sol << std::endl;
-      std::cout << "B - AX:" << std::endl << b - a * sol << std::endl;
-      return;
+    try {
+      auto sol = a.SolveSystem_Symmetric(b);
+      if (a * sol != b) {
+        std::cout << "TestSystemSolution_Symmetric: FAIL!" << std::endl;
+        std::cout << "Matrix:" << std::endl << a << std::endl;
+        std::cout << "Solution:" << std::endl << sol << std::endl;
+        std::cout << "B:" << std::endl << b << std::endl;
+        std::cout << "Corresponding B:" << std::endl << a * sol << std::endl;
+        std::cout << "B - AX:" << std::endl << b - a * sol << std::endl;
+        return;
+      }
+    } catch (const std::runtime_error&) {
+      continue;
     }
   }
 
@@ -344,8 +351,8 @@ void TestSystemSolution_Sor(int number_of_tests) {
 
   for (int i = 0; i < number_of_tests; ++i) {
     int n = 1 + static_cast<int>(random_generator() % 3000);
-    auto x = Task5<double>::SolveSystem(n);
-    auto b = Task5<double>::GetAMatrix(n) * x.matrix;
+    auto x = matrix_tasks::Task5<double>::SolveSystem(n);
+    auto b = matrix_tasks::Task5<double>::GetAMatrix(n) * x.matrix;
 
     std::vector<std::vector<double>> id_vector(n, std::vector<double>(1, 1));
     Matrix id(id_vector);
@@ -362,3 +369,5 @@ void TestSystemSolution_Sor(int number_of_tests) {
 
   std::cout << "TestSystemSolution_Sor: completed." << std::endl;
 }
+
+}  // namespace matrix::matrix_tests

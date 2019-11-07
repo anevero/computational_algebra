@@ -30,4 +30,5 @@ of Jupyter Notebooks (the Russian language is used there).
 
 Note: the project was created and tested on Linux-based systems. There are no
 guarantees that it will work correctly in Windows (in particular,
-multithreading features are expected to work properly only on Linux systems).
+multithreading features may work incorrectly when using the MinGW compiler 
+on Windows).

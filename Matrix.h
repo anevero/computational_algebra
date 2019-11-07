@@ -29,6 +29,10 @@
 
 #include "Utils/ThreadPool.h"
 
+namespace matrix {
+
+using matrix_utils::ThreadPool;
+
 template<class T>
 class Matrix {
  public:
@@ -164,13 +168,13 @@ class Matrix {
 
 // ---------------------------------------------------------------------------
 // Solving systems of linear equations for the TRIDIAGONAL matrix.
-// Tridiagonal matrix representation must include four columns (the first
+// Tridiagonal matrix representation must include three columns (the first
 // column is the element to the left from the main diagonal, and so on).
 
   // Checks if the current matrix can represent the tridiagonal matrix (i.e
-  // the current matrix has four columns).
+  // the current matrix has three columns).
   bool IsTridiagonal() const;
-  // Returns the tridiagonal matrix, represented as four columns of values,
+  // Returns the tridiagonal matrix, represented as three columns of values,
   // in the normal square matrix representation.
   [[nodiscard]] Matrix<T> GetTridiagonalMatrixAsNormal() const;
 
@@ -809,10 +813,12 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
   for (int i = 0; i < size; ++i) {
     // Lock the thread until all the subtraction operations from the previous
     // iterations won't be completed.
-    std::unique_lock<std::mutex> locker(mutex);
-    rows_completed_cv.wait(locker, [this, &rows_completed]() {
-      return (rows_completed == rows_);
-    });
+    {
+      std::unique_lock<std::mutex> locker(mutex);
+      rows_completed_cv.wait(locker, [this, &rows_completed]() {
+        return (rows_completed == rows_);
+      });
+    }
 
     rows_completed = i + 1;
     int current_row = i + 1;
@@ -839,7 +845,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
             {
               std::lock_guard<std::mutex> locker(mutex);
               rows_completed += rows_per_thread;
-              rows_completed_cv.notify_all();
+              rows_completed_cv.notify_one();
             }
           });
       current_row += rows_per_thread;
@@ -1047,7 +1053,7 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
 
 template<class T>
 bool Matrix<T>::IsTridiagonal() const {
-  return (columns_ == 4);
+  return (columns_ == 3);
 }
 
 template<class T>
@@ -1061,9 +1067,6 @@ Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
     if (i != rows_ - 1) {
       result[i][i + 1] = matrix_[i][2];
     }
-    if (i != rows_ - 2 && i != rows_ - 1) {
-      result[i][i + 2] = matrix_[i][3];
-    }
   }
   return Matrix(result);
 }
@@ -1076,6 +1079,11 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
   // Creating current matrix copy for storing temporary values.
   auto matrix = matrix_;
+
+  // Adding the fourth column.
+  for (int i = 0; i < rows_; ++i) {
+    matrix[i].push_back(0);
+  }
 
   // Going right and down.
   for (int i = 0; i < rows_ - 1; ++i) {
@@ -1177,5 +1185,7 @@ template<class T>
 std::optional<T> Matrix<T>::GetConditionNumber() const {
   return condition_number_;
 }
+
+}  // namespace matrix
 
 #endif  // MATRIX_H_

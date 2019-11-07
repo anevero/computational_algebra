@@ -1,11 +1,17 @@
 #include "Utils.h"
 
+namespace matrix::matrix_utils {
+
 namespace {
 
 // Constant seed is used to make the results of the tests more predictable.
 std::mt19937_64 random_generator(42);
 
 }  // namespace
+
+void SetRandomSeed(unsigned long long seed) {
+  random_generator.seed(seed);
+}
 
 long double Random(int modulo, bool force_positive) {
   long double
@@ -15,3 +21,5 @@ long double Random(int modulo, bool force_positive) {
   }
   return value;
 }
+
+}  // namespace matrix::matrix_utils

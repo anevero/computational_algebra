@@ -1,7 +1,9 @@
 #include "DataOutput.h"
 
+namespace matrix::matrix_utils {
+
 void DataOutput::Task1_RandomInput() {
-  auto results = Task1<double>::RandomInput();
+  auto results = matrix_tasks::Task1<double>::RandomInput();
   std::fstream out;
   out << std::fixed << std::setprecision(7);
 
@@ -61,7 +63,7 @@ void DataOutput::Task1_RandomInput() {
 }
 
 void DataOutput::Task1_SingleVsMultiThread() {
-  auto results = Task1<double>::SingleVsMultiThread();
+  auto results = matrix_tasks::Task1<double>::SingleVsMultiThread();
   std::fstream out;
   out << std::fixed << std::setprecision(7);
 
@@ -91,7 +93,7 @@ void DataOutput::Task1_SingleVsMultiThread() {
 }
 
 void DataOutput::Task2_RandomBForSecondMatrix() {
-  auto results = Task2<double>::RandomBForSecondMatrix();
+  auto results = matrix_tasks::Task2<double>::RandomBForSecondMatrix();
   std::fstream out;
   out << std::fixed << std::setprecision(10);
 
@@ -115,7 +117,7 @@ void DataOutput::Task2_RandomBForSecondMatrix() {
 }
 
 void DataOutput::Task3_RandomInput() {
-  auto results = Task3<double>::RandomInput();
+  auto results = matrix_tasks::Task3<double>::RandomInput();
   std::fstream out;
   out << std::fixed << std::setprecision(5);
 
@@ -133,7 +135,7 @@ void DataOutput::Task3_RandomInput() {
 }
 
 void DataOutput::Task5_DifferentOmegas() {
-  auto result = Task5<double>::GetTime(0.8, 1.2);
+  auto result = matrix_tasks::Task5<double>::GetTime(0.8, 1.2);
   std::fstream out;
 
   for (int i = 0; i < 3; ++i) {
@@ -144,3 +146,5 @@ void DataOutput::Task5_DifferentOmegas() {
     out.close();
   }
 }
+
+}  // namespace matrix::matrix_utils

@@ -14,6 +14,8 @@
 #include "../Matrix.h"
 #include "../Utils/Utils.h"
 
+namespace matrix::matrix_tasks {
+
 template<class T>
 class Task1 {
  public:
@@ -136,7 +138,7 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
     // Generating random values for the matrix.
     for (int j = 0; j < size; ++j) {
       for (int k = 0; k < j + 2 && k < size; ++k) {
-        auto value = Random();
+        auto value = matrix_utils::Random();
         f_vector[j][k] = value;
         d_vector[j][k] = value;
         ld_vector[j][k] = value;
@@ -239,7 +241,7 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
     // Generating random values for the matrix.
     for (int j = 0; j < size; ++j) {
       for (int k = 0; k < j + 2 && k < size; ++k) {
-        auto value = Random();
+        auto value = matrix_utils::Random();
         d_vector[j][k] = value;
       }
     }
@@ -303,7 +305,7 @@ auto Task1<T>::TimeForAlmostTriangularMatrix(int matrix_size) {
 
   for (int j = 0; j < matrix_size; ++j) {
     for (int k = 0; k < j + 2 && k < matrix_size; ++k) {
-      m_vector[j][k] = Random();
+      m_vector[j][k] = matrix_utils::Random();
     }
   }
 
@@ -315,5 +317,7 @@ auto Task1<T>::TimeForAlmostTriangularMatrix(int matrix_size) {
 
   return std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 }
+
+}  // namespace matrix::matrix_tasks
 
 #endif  // TASKS_TASK1_H_

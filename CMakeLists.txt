@@ -2,15 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(cma)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -mtune=haswell")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
-if (MINGW)
-    set(THREADS_OPTION "-mthreads")
-else (MINGW)
-    set(THREADS_OPTION "-pthread")
-endif (MINGW)
-
-set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-no-pie ${THREADS_OPTION}")
+set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-no-pie -pthread")
 
 add_executable(cma main.cpp Matrix.h
         Tests/Tests.h Tests/Tests.cpp

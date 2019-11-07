@@ -15,6 +15,8 @@
 #include "../Matrix.h"
 #include "../Utils/Utils.h"
 
+namespace matrix::matrix_tasks {
+
 template<class T>
 class Task4 {
  public:
@@ -103,5 +105,7 @@ void Task4<T>::SecondMatrix() {
 
   std::cout << std::endl;
 }
+
+}  // namespace matrix::matrix_tasks
 
 #endif  // TASKS_TASK4_H_

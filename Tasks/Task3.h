@@ -14,6 +14,8 @@
 #include "../Matrix.h"
 #include "../Utils/Utils.h"
 
+namespace matrix::matrix_tasks {
+
 template<class T>
 class Task3 {
  public:
@@ -41,7 +43,7 @@ auto Task3<T>::RandomInput(int number_of_tests, int max_matrix_size) {
       // Generating random values for the a matrix.
       for (int j = 0; j < size; ++j) {
         for (int k = 0; k <= j; ++k) {
-          T value = Random();
+          T value = matrix_utils::Random();
           a_vector[j][k] = value;
           a_vector[k][j] = value;
         }
@@ -49,7 +51,7 @@ auto Task3<T>::RandomInput(int number_of_tests, int max_matrix_size) {
 
       // Generating random values for the b matrix.
       for (int j = 0; j < size; ++j) {
-        T value = Random();
+        T value = matrix_utils::Random();
         b_vector[j][0] = value;
       }
 
@@ -80,5 +82,7 @@ auto Task3<T>::RandomInput(int number_of_tests, int max_matrix_size) {
 
   return std::tuple{result_tlu, result_ldl};
 }
+
+}  // namespace matrix::matrix_tasks
 
 #endif  // TASKS_TASK3_H_

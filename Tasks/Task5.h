@@ -7,6 +7,8 @@
 
 #include "../Matrix.h"
 
+namespace matrix::matrix_tasks {
+
 template<class T>
 class Task5 {
  public:
@@ -104,5 +106,7 @@ std::vector<std::vector<int>> Task5<T>::GetTime(T min_omega, T max_omega) {
 
   return result;
 }
+
+}  // namespace matrix::matrix_tasks
 
 #endif  // TASKS_TASK5_H_

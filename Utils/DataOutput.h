@@ -11,6 +11,8 @@
 #include "../Tasks/Task3.h"
 #include "../Tasks/Task5.h"
 
+namespace matrix::matrix_utils {
+
 class DataOutput {
  public:
   static void Task1_RandomInput();
@@ -19,5 +21,7 @@ class DataOutput {
   static void Task3_RandomInput();
   static void Task5_DifferentOmegas();
 };
+
+}  // namespace matrix::matrix_utils
 
 #endif  // UTILS_DATAOUTPUT_H_

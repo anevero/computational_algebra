@@ -14,6 +14,8 @@
 #include "../Matrix.h"
 #include "../Utils/Utils.h"
 
+namespace matrix::matrix_tasks {
+
 template<class T>
 class Task2 {
  public:
@@ -162,7 +164,7 @@ auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
   for (int i = 0; i < number_of_tests; ++i) {
     std::cout << "Test number: " << i + 1 << std::endl;
     for (int j = 0; j < size; ++j) {
-      b_vector_ld[j][0] = Random();
+      b_vector_ld[j][0] = matrix_utils::Random();
       b_vector_d[j][0] = b_vector_ld[j][0];
       b_vector_f[j][0] = b_vector_ld[j][0];
     }
@@ -198,5 +200,7 @@ auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
 
   return std::tuple{result_f, result_d, result_ld};
 }
+
+}  // namespace matrix::matrix_tasks
 
 #endif  // TASKS_TASK2_H_

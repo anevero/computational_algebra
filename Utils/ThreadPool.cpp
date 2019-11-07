@@ -16,6 +16,8 @@
 
 #include "ThreadPool.h"
 
+namespace matrix::matrix_utils {
+
 namespace {
 
 void RunWorker(void* data) {
@@ -32,14 +34,13 @@ void RunWorker(void* data) {
 ThreadPool::ThreadPool(int num_workers) : num_workers_(num_workers) {}
 
 ThreadPool::~ThreadPool() {
-  if (started_) {
-    std::unique_lock<std::mutex> mutex_lock(mutex_);
-    waiting_to_finish_ = true;
-    mutex_lock.unlock();
-    condition_.notify_all();
-    for (int i = 0; i < num_workers_; ++i) {
-      all_workers_[i].join();
-    }
+  if (!started_) return;
+  std::unique_lock<std::mutex> mutex_lock(mutex_);
+  waiting_to_finish_ = true;
+  mutex_lock.unlock();
+  condition_.notify_all();
+  for (int i = 0; i < num_workers_; ++i) {
+    all_workers_[i].join();
   }
 }
 
@@ -87,3 +88,5 @@ void ThreadPool::Schedule(const std::function<void()>& closure) {
     condition_.notify_all();
   }
 }
+
+}  // namespace matrix::matrix_utils

@@ -1,4 +1,7 @@
-cpplint_light.py
 .idea/
+.vs/
+out/
 cmake-build-debug/
 cmake-build-release/
+cpplint_light.py
+CMakeSettings.json

@@ -17,12 +17,14 @@
 #ifndef UTILS_THREADPOOL_H_
 #define UTILS_THREADPOOL_H_
 
-#include <condition_variable>  // NOLINT
+#include <condition_variable>
 #include <functional>
 #include <list>
-#include <mutex>  // NOLINT
-#include <thread>  // NOLINT
+#include <mutex>
+#include <thread>
 #include <vector>
+
+namespace matrix::matrix_utils {
 
 class ThreadPool {
  public:
@@ -50,5 +52,7 @@ class ThreadPool {
 
   std::vector<std::thread> all_workers_;
 };
+
+}  // namespace matrix::matrix_utils
 
 #endif  // UTILS_THREADPOOL_H_
