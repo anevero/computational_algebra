@@ -28,9 +28,6 @@ template<class T>
 void Task2<T>::FirstMatrix() {
   static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 2, first matrix." << std::endl;
-  std::cout << "Type: " << typeid(T).name() << std::endl;
-  std::cout << "Number of digits: " << std::numeric_limits<T>::digits10
-            << std::endl;
 
   std::fstream in("../input_files/task2_input1");
   int size;
@@ -75,9 +72,6 @@ template<class T>
 void Task2<T>::SecondMatrix() {
   static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 2, second matrix." << std::endl;
-  std::cout << "Type: " << typeid(T).name() << std::endl;
-  std::cout << "Number of digits: " << std::numeric_limits<T>::digits10
-            << std::endl;
 
   std::fstream in("../input_files/task2_input2");
   int size;
