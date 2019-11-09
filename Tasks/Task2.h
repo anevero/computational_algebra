@@ -123,12 +123,12 @@ auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
   std::vector<std::vector<float>> a_vector_f(size, std::vector<float>(size));
   std::vector<std::vector<double>> a_vector_d(size, std::vector<double>(size));
   std::vector<std::vector<long double>>
-      a_vector_ld(size, std::vector<long double>(size));
+    a_vector_ld(size, std::vector<long double>(size));
 
   std::vector<std::vector<float>> b_vector_f(size, std::vector<float>(1));
   std::vector<std::vector<double>> b_vector_d(size, std::vector<double>(1));
   std::vector<std::vector<long double>>
-      b_vector_ld(size, std::vector<long double>(1));
+    b_vector_ld(size, std::vector<long double>(1));
 
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < size; ++j) {

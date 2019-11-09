@@ -36,16 +36,16 @@ typename Task5<T>::Task5Data Task5<T>::SolveSystem(int n, T omega, T epsilon) {
   T first_y, median_y, last_y;
 
   int max_number_of_iterations =
-      std::log(epsilon * n) / std::log(static_cast<double>(n - 1) / n);
+    std::log(epsilon * n) / std::log(static_cast<double>(n - 1) / n);
   int real_number_of_iterations = 0;
 
   for (int i = 0; i <= max_number_of_iterations; ++i) {
     new_first_x = (1 - old_last_x - (n - 2) * old_median_x) / n;
     new_median_x =
-        (1 - omega * new_first_x - (1 - omega) * old_first_x - old_last_x) / n;
+      (1 - omega * new_first_x - (1 - omega) * old_first_x - old_last_x) / n;
     new_last_x =
-        (1 - (n - 2) * (omega * new_median_x + (1 - omega) * old_median_x)
-            - omega * new_first_x - (1 - omega) * old_first_x) / n;
+      (1 - (n - 2) * (omega * new_median_x + (1 - omega) * old_median_x)
+        - omega * new_first_x - (1 - omega) * old_first_x) / n;
     old_first_x = new_first_x;
     old_median_x = new_median_x;
     old_last_x = new_last_x;

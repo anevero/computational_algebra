@@ -22,6 +22,7 @@
 #include <numeric>
 #include <optional>
 #include <stdexcept>
+#include <sstream>
 #include <thread>
 #include <type_traits>
 #include <utility>
@@ -58,10 +59,9 @@ class Matrix {
   friend Matrix<U> operator*(U number, const Matrix<U>& matrix);
 
 // ---------------------------------------------------------------------------
-// << operator overload.
+// Printing the matrix.
 
-  template<class U>
-  friend std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix);
+  [[nodiscard]] std::string ToString() const;
 
 // ---------------------------------------------------------------------------
 // Matrix norm functions. Matrix norm, induced by the vector max-norm, is used.
@@ -83,6 +83,7 @@ class Matrix {
 
   // Counts TLU decomposition with choosing a main element in the column (so
   // rows can be permutated). If the matrix is singular, throws an exception.
+  // Time complexity: O(n^3).
   void CountTluDecomposition();
   // Returns N*1 matrix, which is the solution of AX = b system. b should be
   // N*1 matrix, where N is equal to the number of columns in A matrix.
@@ -118,9 +119,8 @@ class Matrix {
   // to reduce the number of subtraction operations.
   // No elements are chosen as main, because it will break the structure of the
   // matrix. If the current element is equal to zero, and it's not possible to
-  // continue applying this algorithm, the function prints error message to the
-  // std::cerr stream and runs the common algorithm.
-  // Overall time complexity is O(n^2) (while common algorithm takes O(n^3)).
+  // continue applying this algorithm, the function throws an exception.
+  // Overall time complexity is O(n^2).
   void CountTluDecomposition_AlmostTriangular();
   // Works just as common SolveSystem function, but uses the fact, that
   // U matrix from the decomposition of the almost triangular matrix is almost
@@ -134,7 +134,7 @@ class Matrix {
   // Time complexity: O(n^3).
   void CountInverseMatrix_AlmostTriangular_Tlu_SingleThread();
 
-  // Using the fact that the matrix is almost triangular, makes it
+  // Using the fact, that the matrix is almost triangular, makes it
   // lower-triangular and counts the inverse. Overall time complexity is
   // O(n^3).
   void CountInverseMatrix_AlmostTriangular();
@@ -174,14 +174,14 @@ class Matrix {
   // Checks if the current matrix can represent the tridiagonal matrix (i.e
   // the current matrix has three columns).
   bool IsTridiagonal() const;
-  // Returns the tridiagonal matrix, represented as three columns of values,
+  // Returns the tridiagonal matrix represented as three columns of values
   // in the normal square matrix representation.
   [[nodiscard]] Matrix<T> GetTridiagonalMatrixAsNormal() const;
 
   // Returns N*1 matrix, which is the solution of AX = b system. b should be
   // N*1 matrix, where N is equal to the number of columns in A matrix.
   // 'this' is used as A matrix.
-  // Uses tridiagonal matrices properties  for solving the system.
+  // Uses tridiagonal matrices properties for solving the system.
   // Time complexity: O(n).
   [[nodiscard]] Matrix<T> SolveSystem_Tridiagonal(Matrix<T> b) const;
 
@@ -220,11 +220,11 @@ class Matrix {
   // Can be used while solving systems: AX = B will be equal to LU = TB.
   // To save the memory, this matrix is stored as a single-dimensional vector.
   // Number on the ith position points to the coordinate of 1 in the ith row.
-  std::vector<T> T_matrix_TLU_{};
+  std::vector<int> T_matrix_TLU_{};
   // Can be used to express A matrix as the product: A = T^{-1} LU.
   // To save the memory, this matrix is stored as a single-dimensional vector.
   // Number on the ith position points to the coordinate of 1 in the ith column.
-  std::vector<T> T_inverse_matrix_TLU_{};
+  std::vector<int> T_inverse_matrix_TLU_{};
 
 // ---------------------------------------------------------------------------
 // Variables connected with LDL decomposition.
@@ -232,7 +232,7 @@ class Matrix {
   std::vector<std::vector<T>> LT_matrix_LDL_{};
   // To save the memory, this matrix is stored as a single-dimensional vector.
   // Number on the ith position points to the coordinate of 1 in the ith row.
-  std::vector<T> D_matrix_LDL_{};
+  std::vector<int> D_matrix_LDL_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -243,12 +243,15 @@ class Matrix {
 
 template<class T>
 Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
-    : matrix_(std::move(matrix)),
-      epsilon_(epsilon) {
+  : matrix_(std::move(matrix)),
+    epsilon_(epsilon) {
   static_assert(std::is_floating_point_v<T>,
                 "Matrix must contain floating-point numerical values.");
   if (matrix_.empty() || matrix_[0].empty()) {
     throw std::invalid_argument("Empty matrix can't be constructed.");
+  }
+  if (epsilon_ <= 0) {
+    throw std::invalid_argument("Epsilon must be positive.");
   }
   rows_ = matrix_.size();
   columns_ = matrix_[0].size();
@@ -283,7 +286,7 @@ template<class T>
 Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
-        "Matrices have different sizes; the sum can't be counted.");
+      "Matrices have different sizes; the sum can't be counted.");
   }
 
   Matrix<T> result(matrix_, std::max(epsilon_, other.epsilon_));
@@ -299,7 +302,7 @@ template<class T>
 Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
-        "Matrices have different sizes; the difference can't be counted.");
+      "Matrices have different sizes; the difference can't be counted.");
   }
 
   Matrix<T> result(matrix_, std::max(epsilon_, other.epsilon_));
@@ -315,7 +318,7 @@ template<class T>
 Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
   if (columns_ != other.rows_) {
     throw std::runtime_error(
-        "Matrices are not consistent; the product can't be counted.");
+      "Matrices are not consistent; the product can't be counted.");
   }
 
   std::vector<std::vector<T>> result(rows_, std::vector<T>(other.columns_, 0));
@@ -346,29 +349,35 @@ Matrix<U> operator*(U number, const Matrix<U>& matrix) {
 }
 
 // ---------------------------------------------------------------------------
-// << operator overload.
+// Printing the matrix.
+
+template<class T>
+std::string Matrix<T>::ToString() const {
+  std::stringstream stream;
+  stream << '[';
+  for (int i = 0; i < rows_; ++i) {
+    if (i != 0) {
+      stream << ' ';
+    }
+    stream << '[';
+    for (int j = 0; j < columns_; ++j) {
+      stream << matrix_[i][j];
+      if (j != columns_ - 1) {
+        stream << ", ";
+      }
+    }
+    stream << ']';
+    if (i != rows_ - 1) {
+      stream << ',' << std::endl;
+    }
+  }
+  stream << ']';
+  return stream.str();
+}
 
 template<class U>
 std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
-  out << '[';
-  for (int i = 0; i < matrix.rows_; ++i) {
-    if (i != 0) {
-      out << ' ';
-    }
-    out << '[';
-    for (int j = 0; j < matrix.columns_; ++j) {
-      out << matrix.matrix_[i][j];
-      if (j != matrix.columns_ - 1) {
-        out << ", ";
-      }
-    }
-    out << ']';
-    if (i != matrix.rows_ - 1) {
-      out << ',' << std::endl;
-    }
-  }
-  out << ']';
-  return out;
+  return out << matrix.ToString();
 }
 
 // ---------------------------------------------------------------------------
@@ -430,8 +439,8 @@ void Matrix<T>::CountTluDecomposition() {
   L_matrix_TLU_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   U_matrix_TLU_ = matrix_;
 
-  T_matrix_TLU_ = std::vector<T>(size, 0);
-  T_inverse_matrix_TLU_ = std::vector<T>(size, 0);
+  T_matrix_TLU_ = std::vector<int>(size, 0);
+  T_inverse_matrix_TLU_ = std::vector<int>(size, 0);
   std::iota(T_matrix_TLU_.begin(), T_matrix_TLU_.end(), 0);
   std::iota(T_inverse_matrix_TLU_.begin(), T_inverse_matrix_TLU_.end(), 0);
 
@@ -441,14 +450,14 @@ void Matrix<T>::CountTluDecomposition() {
     int index_of_biggest = i;
     for (int j = i; j < size; ++j) {
       if (std::abs(U_matrix_TLU_[j][i])
-          > std::abs(U_matrix_TLU_[index_of_biggest][i])) {
+        > std::abs(U_matrix_TLU_[index_of_biggest][i])) {
         index_of_biggest = j;
       }
     }
 
     // Swapping rows in L and U matrices. Swapping vectors works in O(1)
-    // time (std::vector::swap just replaces internal pointers), so updating
-    // all these matrices will take O(1) time.
+    // time (std::vector::swap just swaps internal pointers), so updating
+    // these matrices will take O(1) time.
     U_matrix_TLU_[i].swap(U_matrix_TLU_[index_of_biggest]);
     L_matrix_TLU_[i].swap(L_matrix_TLU_[index_of_biggest]);
 
@@ -457,7 +466,7 @@ void Matrix<T>::CountTluDecomposition() {
     std::swap(T_inverse_matrix_TLU_[i],
               T_inverse_matrix_TLU_[index_of_biggest]);
 
-    if (U_matrix_TLU_[i][i] == 0) {
+    if (std::abs(U_matrix_TLU_[i][i]) < epsilon_) {
       L_matrix_TLU_.clear();
       U_matrix_TLU_.clear();
       T_matrix_TLU_.clear();
@@ -498,7 +507,7 @@ Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
   for (int i = 0; i < size; ++i) {
     new_b[i] = b.matrix_[T_matrix_TLU_[i]];
   }
-  b.matrix_ = new_b;
+  b.matrix_ = std::move(new_b);
 
   // Solving L(UX) = b system using the fact that L is lower-triangular.
   // Takes O(n^2) time.
@@ -510,7 +519,7 @@ Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
     }
   }
 
-  // Solving UX = b system, using the fact, that U is upper-triangular.
+  // Solving UX = b system using the fact that U is upper-triangular.
   // Takes O(n^2) time.
   for (int i = size - 1; i >= 0; --i) {
     b.matrix_[i][0] /= U_matrix_TLU_[i][i];
@@ -532,12 +541,12 @@ void Matrix<T>::CountInverseMatrix() {
 
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   std::vector<Matrix<T>> identity_columns(
-      size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
+    size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
   for (int i = 0; i < size; ++i) {
     identity_columns[i].matrix_[i][0] = 1;
   }
 
-  // Solving system Ax = e, where A is 'this' matrix, x is the column of the
+  // Solving Ax = e systems, where A is 'this' matrix, x is the column of the
   // inverse matrix, e is the column of the identity matrix.
   // These systems can be solved independently for all the columns of the
   // inverse matrix, so we will use multithreading here.
@@ -553,16 +562,16 @@ void Matrix<T>::CountInverseMatrix() {
   for (int i = 0; i < number_of_threads; ++i) {
     columns_per_thread = columns_remaining / (number_of_threads - i);
     threads[i] = std::thread(
-        [this, &identity_columns, current_column, columns_per_thread, size]() {
-          for (int k = current_column;
-               k < current_column + columns_per_thread;
-               ++k) {
-            auto inverse_column = SolveSystem(identity_columns[k]).matrix_;
-            for (int j = 0; j < size; ++j) {
-              inverse_matrix_[j][k] = inverse_column[j][0];
-            }
+      [this, &identity_columns, current_column, columns_per_thread, size]() {
+        for (int k = current_column;
+             k < current_column + columns_per_thread;
+             ++k) {
+          auto inverse_column = SolveSystem(identity_columns[k]).matrix_;
+          for (int j = 0; j < size; ++j) {
+            inverse_matrix_[j][k] = inverse_column[j][0];
           }
-        });
+        }
+      });
 
     current_column += columns_per_thread;
     columns_remaining -= columns_per_thread;
@@ -623,20 +632,20 @@ void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
   L_matrix_TLU_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   U_matrix_TLU_ = matrix_;
 
-  T_matrix_TLU_ = std::vector<T>(size, 0);
-  T_inverse_matrix_TLU_ = std::vector<T>(size, 0);
+  T_matrix_TLU_ = std::vector<int>(size, 0);
+  T_inverse_matrix_TLU_ = std::vector<int>(size, 0);
   std::iota(T_matrix_TLU_.begin(), T_matrix_TLU_.end(), 0);
   std::iota(T_inverse_matrix_TLU_.begin(), T_inverse_matrix_TLU_.end(), 0);
 
   // Filling L and U matrices out. Takes O(n^2) time.
   for (int i = 0; i < size; ++i) {
-    if (U_matrix_TLU_[i][i] == 0) {
+    if (std::abs(U_matrix_TLU_[i][i]) < epsilon_) {
       L_matrix_TLU_.clear();
       U_matrix_TLU_.clear();
       T_matrix_TLU_.clear();
       T_inverse_matrix_TLU_.clear();
       throw std::runtime_error(
-          "This algorithm isn't suitable for this matrix.");
+        "This algorithm isn't suitable for this matrix.");
     }
 
     // Updating the current column in L matrix. Takes O(n) time.
@@ -701,12 +710,12 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
 
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   std::vector<Matrix<T>> identity_columns(
-      size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
+    size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
   for (int i = 0; i < size; ++i) {
     identity_columns[i].matrix_[i][0] = 1;
   }
 
-  // Solving system Ax = e, where A is 'this' matrix, x is the column of the
+  // Solving Ax = e systems, where A is 'this' matrix, x is the column of the
   // inverse matrix, e is the column of the identity matrix.
   // These systems can be solved independently for all the columns of the
   // inverse matrix, so we will use multithreading here.
@@ -722,17 +731,17 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
   for (int i = 0; i < number_of_threads; ++i) {
     columns_per_thread = columns_remaining / (number_of_threads - i);
     threads[i] = std::thread(
-        [this, &identity_columns, current_column, columns_per_thread, size]() {
-          for (int k = current_column;
-               k < current_column + columns_per_thread;
-               ++k) {
-            auto inverse_column =
-                SolveSystem_AlmostTriangular(identity_columns[k]).matrix_;
-            for (int j = 0; j < size; ++j) {
-              inverse_matrix_[j][k] = inverse_column[j][0];
-            }
+      [this, &identity_columns, current_column, columns_per_thread, size]() {
+        for (int k = current_column;
+             k < current_column + columns_per_thread;
+             ++k) {
+          auto inverse_column =
+            SolveSystem_AlmostTriangular(identity_columns[k]).matrix_;
+          for (int j = 0; j < size; ++j) {
+            inverse_matrix_[j][k] = inverse_column[j][0];
           }
-        });
+        }
+      });
 
     current_column += columns_per_thread;
     columns_remaining -= columns_per_thread;
@@ -751,7 +760,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
   int size = rows_;
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size));
   Matrix<T> identity_column(
-      std::vector<std::vector<T>>(size, std::vector<T>(1, 0)));
+    std::vector<std::vector<T>>(size, std::vector<T>(1, 0)));
 
   for (int i = 0; i < size; ++i) {
     identity_column.matrix_[i][0] = 1;
@@ -829,25 +838,25 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
       rows_per_thread = rows_remaining / (number_of_threads - j);
       if (rows_per_thread == 0) continue;
       thread_pool.Schedule(
-          [this, &a_matrix, current_row, rows_per_thread, size, i,
-              &rows_completed, &mutex, &rows_completed_cv]() {
-            for (int k = current_row; k < current_row + rows_per_thread; ++k) {
-              if (std::abs(a_matrix[i][i]) < epsilon_) {
-                throw std::runtime_error(
-                    "Optimized algorithm cannot be applied to "
-                    "this matrix.");
-              }
-              auto multiplier = a_matrix[k][i] / a_matrix[i][i];
-              for (int l = 0; l < size; ++l) {
-                inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
-              }
+        [this, &a_matrix, &rows_completed, &mutex, &rows_completed_cv,
+          current_row, rows_per_thread, size, i]() {
+          for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+            if (std::abs(a_matrix[i][i]) < epsilon_) {
+              throw std::runtime_error(
+                "Optimized algorithm cannot be applied to "
+                "this matrix.");
             }
-            {
-              std::lock_guard<std::mutex> locker(mutex);
-              rows_completed += rows_per_thread;
-              rows_completed_cv.notify_one();
+            auto multiplier = a_matrix[k][i] / a_matrix[i][i];
+            for (int l = 0; l < size; ++l) {
+              inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
             }
-          });
+          }
+          {
+            std::lock_guard<std::mutex> locker(mutex);
+            rows_completed += rows_per_thread;
+            rows_completed_cv.notify_one();
+          }
+        });
       current_row += rows_per_thread;
       rows_remaining -= rows_per_thread;
     }
@@ -862,14 +871,14 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
     rows_per_thread = rows_remaining / (number_of_threads - i);
     if (rows_per_thread == 0) continue;
     thread_pool.Schedule(
-        [this, &a_matrix, current_row, rows_per_thread, size]() {
-          for (int k = current_row; k < current_row + rows_per_thread; ++k) {
-            auto multiplier = a_matrix[k][k];
-            for (int j = 0; j < size; ++j) {
-              inverse_matrix_[k][j] /= multiplier;
-            }
+      [this, &a_matrix, current_row, rows_per_thread, size]() {
+        for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+          auto multiplier = a_matrix[k][k];
+          for (int j = 0; j < size; ++j) {
+            inverse_matrix_[k][j] /= multiplier;
           }
-        });
+        }
+      });
     current_row += rows_per_thread;
     rows_remaining -= rows_per_thread;
   }
@@ -964,7 +973,7 @@ void Matrix<T>::CountLdlDecomposition_Symmetric() {
 
   // Initializing LT with 'this' matrix, D with 'identity' matrix.
   LT_matrix_LDL_ = matrix_;
-  D_matrix_LDL_ = std::vector<T>(size, 1);
+  D_matrix_LDL_ = std::vector<int>(size, 1);
 
   // Filling LT and D matrices out. Takes O(n^3) time.
   for (int i = 0; i < size; ++i) {
@@ -973,7 +982,7 @@ void Matrix<T>::CountLdlDecomposition_Symmetric() {
       LT_matrix_LDL_.clear();
       D_matrix_LDL_.clear();
       throw std::runtime_error(
-          "LDL decomposition algorithm can't be applied to this matrix.");
+        "LDL decomposition algorithm can't be applied to this matrix.");
     }
 
     // Subtracting the current row from all the rows below (and filling the
@@ -1098,7 +1107,7 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
     if (std::abs(matrix[i][1]) < epsilon_) {
       throw std::runtime_error(
-          "This algorithm cannot be applied to this matrix.");
+        "This algorithm cannot be applied to this matrix.");
     }
 
     auto multiplier = (-1) * matrix[i + 1][0] / matrix[i][1];
@@ -1110,10 +1119,10 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
   if (std::abs(matrix[rows_ - 1][1]) < epsilon_) {
     throw std::runtime_error(
-        "This algorithm cannot be applied to this matrix.");
+      "This algorithm cannot be applied to this matrix.");
   }
 
-  // Going up.
+  // Going left and up.
   for (int i = rows_ - 1; i >= 0; --i) {
     b.matrix_[i][0] /= matrix[i][1];
     if (i > 0) {

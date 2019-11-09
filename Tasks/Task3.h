@@ -66,14 +66,14 @@ auto Task3<T>::RandomInput(int number_of_tests, int max_matrix_size) {
       auto t2_tlu = std::chrono::high_resolution_clock::now();
 
       tlu_time += std::chrono::duration_cast<std::chrono::microseconds>(
-          t2_tlu - t1_tlu).count();
+        t2_tlu - t1_tlu).count();
 
       auto t1_ldl = std::chrono::high_resolution_clock::now();
       void(a_ldl.SolveSystem_Symmetric(b_ldl));
       auto t2_ldl = std::chrono::high_resolution_clock::now();
 
       ldl_time += std::chrono::duration_cast<std::chrono::microseconds>(
-          t2_ldl - t1_ldl).count();
+        t2_ldl - t1_ldl).count();
     }
 
     result_tlu.push_back(tlu_time / number_of_tests);
