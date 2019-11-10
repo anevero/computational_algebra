@@ -35,10 +35,11 @@ ThreadPool::ThreadPool(int num_workers) : num_workers_(num_workers) {}
 
 ThreadPool::~ThreadPool() {
   if (!started_) return;
-  std::unique_lock<std::mutex> mutex_lock(mutex_);
-  waiting_to_finish_ = true;
-  mutex_lock.unlock();
-  condition_.notify_all();
+  {
+    std::lock_guard<std::mutex> mutex_lock(mutex_);
+    waiting_to_finish_ = true;
+    condition_.notify_all();
+  }
   for (int i = 0; i < num_workers_; ++i) {
     all_workers_[i].join();
   }
@@ -84,7 +85,6 @@ void ThreadPool::Schedule(const std::function<void()>& closure) {
   }
   tasks_.push_back(closure);
   if (started_) {
-    lock.unlock();
     condition_.notify_all();
   }
 }
