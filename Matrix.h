@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <complex>
 #include <condition_variable>
 #include <iostream>
 #include <limits>
@@ -222,12 +223,23 @@ class Matrix {
   // Time complexity is O(n^3).
   void CountUpperHessenbergMatrix();
 
-  // Runs iterations of QR algorithm. Every iteration updates current
-  // Hessenberg matrix (with O(n^2) time). Finally Hessenberg matrix
-  // should have cells with eigenvalues on the diagonal.
+  // Runs one iteration of QR algorithm. One iteration updates current
+  // Hessenberg matrix (with O(n^2) time).
   // If Hessenberg matrix hasn't been counted yet, runs CountUpperHessenberg
   // Matrix() method.
   void RunQRAlgorithmIteration();
+
+  // Runs QR algorithm iterations, until the Hessenberg matrix converges to the
+  // matrix with eigenvalues on the diagonal. Convergence condition: for every
+  // item on the diagonal the difference between it and its version at the
+  // previous iteration should be <= epsilon.
+  void RunQrAlgorithm(T epsilon = 0.00001);
+
+  // Returns a vector with all the eigenvalues of the matrix. These eigenvalues
+  // are extracted from the Hessenberg matrix after applying QR algorithm to
+  // it. If you haven't applied the algorithm, the results of these function
+  // are undefined.
+  std::vector<std::complex<T>> ExtractEigenvaluesFromHessenbergMatrix() const;
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -1431,6 +1443,35 @@ void Matrix<T>::RunQRAlgorithmIteration() {
                                    std::get<3>(rotation_matrices[i]),
                                    size);
   }
+}
+
+template<class T>
+void Matrix<T>::RunQrAlgorithm(T epsilon) {
+  if (hessenberg_matrix_.empty()) {
+    CountUpperHessenbergMatrix();
+  }
+
+  int size = rows_;
+  std::vector<T> previous_values(size, 0);
+  bool one_more_iteration = true;
+
+  int number_of_iterations = 0;
+
+  while (one_more_iteration) {
+    RunQRAlgorithmIteration();
+    ++number_of_iterations;
+
+    one_more_iteration = false;
+    for (int i = 0; i < size; ++i) {
+      if (!one_more_iteration &&
+          std::abs(previous_values[i] - hessenberg_matrix_[i][i]) > epsilon) {
+        one_more_iteration = true;
+      }
+      previous_values[i] = hessenberg_matrix_[i][i];
+    }
+  }
+
+  std::clog << number_of_iterations << std::endl;
 }
 
 // ---------------------------------------------------------------------------

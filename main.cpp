@@ -21,10 +21,8 @@ int main() {
                                         {4, -146.2, 168.2, 146.2},
                                         {-8, -8, 0, 7}};
   Matrix m(v);
-  for (int i = 0; i < 100; ++i) {
-    m.RunQRAlgorithmIteration();
-    std::cout << m.GetUpperHessenbergMatrix() << std::endl;
-  }
+  m.RunQrAlgorithm();
+  std::cout << m.GetUpperHessenbergMatrix();
 
 //  int matrix_size;
 //  while (true) {
