@@ -188,11 +188,46 @@ class Matrix {
 // ---------------------------------------------------------------------------
 // QR decomposition for any matrix.
 
+ private:
+  // A function to multiply the matrix by the rotation matrix in O(n)
+  // time (matrix = rotation_matrix * matrix). Some tricks are used to make
+  // compiler apply vectorization here.
+  // This function is used in QR decomposition algorithm and in QR algorithm
+  // for getting all the eigenvalues of the matrix.
+  void MultiplyMatrixByRotation_Left(std::vector<std::vector<T>>* matrix,
+                                     T sin, T cos,
+                                     int i, int j, int size) const;
+
+  // The same as previous, but performs multiplication like:
+  // matrix = matrix * rotation_matrix.
+  void MultiplyMatrixByRotation_Right(std::vector<std::vector<T>>* matrix,
+                                      T sin, T cos,
+                                      int i, int j, int size) const;
+
+ public:
   // Counts QR decomposition of the matrix (using Givens method). Internal
   // orthogonal matrices are multiplied efficiently (only two rows and two
   // columns are changed) to improve time complexity.
   // Time complexity is O(n^3).
   void CountQrDecomposition();
+
+// ---------------------------------------------------------------------------
+// QR algorithm for any matrix (based on upper Hessenberg matrices). Allows to
+// get all the eigenvalues of the matrix.
+
+  bool IsUpperHessenberg() const;
+
+  // Counts an upper Hessenberg (almost triangular) matrix, which is similar
+  // to this.
+  // Time complexity is O(n^3).
+  void CountUpperHessenbergMatrix();
+
+  // Runs iterations of QR algorithm. Every iteration updates current
+  // Hessenberg matrix (with O(n^2) time). Finally Hessenberg matrix
+  // should have cells with eigenvalues on the diagonal.
+  // If Hessenberg matrix hasn't been counted yet, runs CountUpperHessenberg
+  // Matrix() method.
+  void RunQRAlgorithm();
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -213,6 +248,9 @@ class Matrix {
   // GetQMatrix returns Q matrix in normal (not transpose) state.
   [[nodiscard]] Matrix<T> GetQMatrix_QR() const;
   [[nodiscard]] Matrix<T> GetRMatrix_QR() const;
+
+  // Returns an upper Hessenberg matrix, similar to this.
+  [[nodiscard]] Matrix<T> GetUpperHessenbergMatrix() const;
 
   [[nodiscard]] Matrix<T> GetInverseMatrix() const;
   std::optional<T> GetConditionNumber() const;
@@ -254,6 +292,22 @@ class Matrix {
   // equality you need to transpose Q_matrix_QR_).
   std::vector<std::vector<T>> Q_matrix_QR_{};
   std::vector<std::vector<T>> R_matrix_QR_{};
+
+// ---------------------------------------------------------------------------
+// Variables connected with QR algorithm.
+
+  // Upper Hessenberg matrix, similar to 'this', is stored here. This variable
+  // is updated every iteration of the QR algorithm, and finally it will
+  // have all the eigenvalues at the cells of the main diagonal.
+  std::vector<std::vector<T>> hessenberg_matrix_{};
+
+  // Q matrix from QR decomposition of the upper Hessenberg matrix. Used inside
+  // QR algorithm. Stored in transpose state.
+  std::vector<std::vector<T>> hessenberg_Q_matrix_{};
+
+  // R matrix from QR decomposition of the upper Hessenberg matrix. Used inside
+  // QR algorithm.
+  std::vector<std::vector<T>> hessenberg_R_matrix_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1183,6 +1237,53 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 // QR decomposition for any matrix.
 
 template<class T>
+void Matrix<T>::MultiplyMatrixByRotation_Left(
+    std::vector<std::vector<T>>* matrix, T sin, T cos,
+    int i, int j, int size) const {
+
+  std::vector<T> new_j_row = (*matrix)[j];
+  std::vector<T> new_i_row = (*matrix)[j];
+
+  for (int k = 0; k < size; ++k) {
+    new_j_row[k] *= cos;
+  }
+  for (int k = 0; k < size; ++k) {
+    new_j_row[k] -= sin * (*matrix)[i][k];
+  }
+  for (int k = 0; k < size; ++k) {
+    new_i_row[k] *= sin;
+  }
+  for (int k = 0; k < size; ++k) {
+    new_i_row[k] += cos * (*matrix)[i][k];
+  }
+
+  (*matrix)[j] = std::move(new_j_row);
+  (*matrix)[i] = std::move(new_i_row);
+}
+
+template<class T>
+void Matrix<T>::MultiplyMatrixByRotation_Right(
+    std::vector<std::vector<T>>* matrix, T sin, T cos,
+    int i, int j, int size) const {
+  std::vector<T> new_j_column = std::vector<T>(size, 0);
+  std::vector<T> new_i_column = std::vector<T>(size, 0);
+
+  for (int k = 0; k < size; ++k) {
+    new_j_column[k] = cos * (*matrix)[k][j] + sin * (*matrix)[k][i];
+  }
+  for (int k = 0; k < size; ++k) {
+    new_i_column[k] = -sin * (*matrix)[k][j] + cos * (*matrix)[k][i];
+  }
+
+  for (int k = 0; k < size; ++k) {
+    (*matrix)[k][j] = new_j_column[k];
+  }
+  for (int k = 0; k < size; ++k) {
+    (*matrix)[k][i] = new_i_column[k];
+  }
+}
+
+template<class T>
 void Matrix<T>::CountQrDecomposition() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1195,33 +1296,6 @@ void Matrix<T>::CountQrDecomposition() {
     Q_matrix_QR_[i][i] = 1;
   }
 
-  // A function to multiply the matrix by the rotation matrix in O(n)
-  // time (matrix = rotation_matrix * matrix). We also try to make compiler
-  // apply vectorization here.
-  auto multiply_rotation =
-      [](std::vector<std::vector<T>>& matrix,
-         T sin, T cos,
-         int i, int j, int size) {
-        std::vector<T> new_j_row = matrix[j];
-        std::vector<T> new_i_row = matrix[j];
-
-        for (int k = 0; k < size; ++k) {
-          new_j_row[k] *= cos;
-        }
-        for (int k = 0; k < size; ++k) {
-          new_j_row[k] -= sin * matrix[i][k];
-        }
-        for (int k = 0; k < size; ++k) {
-          new_i_row[k] *= sin;
-        }
-        for (int k = 0; k < size; ++k) {
-          new_i_row[k] += cos * matrix[i][k];
-        }
-
-        matrix[j] = std::move(new_j_row);
-        matrix[i] = std::move(new_i_row);
-      };
-
   for (int j = 0; j < size - 1; ++j) {
     for (int i = j + 1; i < size; ++i) {
       // Making matrix[i][j] element equal to zero.
@@ -1229,7 +1303,9 @@ void Matrix<T>::CountQrDecomposition() {
       T divisor = std::sqrt(R_matrix_QR_[i][j] * R_matrix_QR_[i][j] +
           R_matrix_QR_[j][j] * R_matrix_QR_[j][j]);
 
-      if (divisor < epsilon_) {
+      if (std::abs(divisor) < epsilon_) {
+        Q_matrix_QR_.clear();
+        R_matrix_QR_.clear();
         throw std::runtime_error(
             "Givens algorithm can't be applied to this matrix.");
       }
@@ -1237,10 +1313,68 @@ void Matrix<T>::CountQrDecomposition() {
       T cos = R_matrix_QR_[j][j] / divisor;
       T sin = -1 * R_matrix_QR_[i][j] / divisor;
 
-      multiply_rotation(Q_matrix_QR_, sin, cos, i, j, size);
-      multiply_rotation(R_matrix_QR_, sin, cos, i, j, size);
+      MultiplyMatrixByRotation_Left(&Q_matrix_QR_, sin, cos, i, j, size);
+      MultiplyMatrixByRotation_Left(&R_matrix_QR_, sin, cos, i, j, size);
 
       R_matrix_QR_[i][j] = 0;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// QR algorithm for any matrix (based on upper Hessenberg matrices). Allows to
+// get all the eigenvalues of the matrix.
+
+template<class T>
+bool Matrix<T>::IsUpperHessenberg() const {
+  if (rows_ != columns_) return false;
+  int size = rows_;
+
+  for (int i = 0; i < size - 2; ++i) {
+    for (int j = i + 2; j < size; ++j) {
+      if (std::abs(matrix_[i][j]) > epsilon_) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+template<class T>
+void Matrix<T>::CountUpperHessenbergMatrix() {
+  if (rows_ != columns_) {
+    throw std::runtime_error("Matrix is not square.");
+  }
+  int size = rows_;
+
+  hessenberg_matrix_ = matrix_;
+
+  for (int j = 0; j < size - 2; ++j) {
+    for (int i = j + 2; i < size; ++i) {
+      // Making matrix[i][j] element equal to zero. Multiplying current matrix
+      // from the left and from the right (so the new matrix will be similar
+      // to it and will have all the eigenvalues saved).
+
+      T divisor = std::sqrt(
+          hessenberg_matrix_[j + 1][j] * hessenberg_matrix_[j + 1][j] +
+              hessenberg_matrix_[i][j] * hessenberg_matrix_[i][j]);
+
+      if (std::abs(divisor) < epsilon_) {
+        hessenberg_matrix_.clear();
+        throw std::runtime_error(
+            "Givens algorithm can't be applied to this matrix.");
+      }
+
+      T cos = hessenberg_matrix_[j + 1][j] / divisor;
+      T sin = -1 * hessenberg_matrix_[i][j] / divisor;
+
+      MultiplyMatrixByRotation_Left(
+          &hessenberg_matrix_, sin, cos, i, j + 1, size);
+      MultiplyMatrixByRotation_Right(
+          &hessenberg_matrix_, -sin, cos, i, j + 1, size);
+
+      hessenberg_matrix_[i][j] = 0;
     }
   }
 }
@@ -1302,6 +1436,11 @@ Matrix<T> Matrix<T>::GetQMatrix_QR() const {
 template<class T>
 Matrix<T> Matrix<T>::GetRMatrix_QR() const {
   return Matrix(R_matrix_QR_, epsilon_);
+}
+
+template<class T>
+Matrix<T> Matrix<T>::GetUpperHessenbergMatrix() const {
+  return Matrix(hessenberg_matrix_, epsilon_);
 }
 
 template<class T>

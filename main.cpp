@@ -14,6 +14,16 @@ int main() {
 //  matrix::matrix_utils::DataOutput::Task3_RandomInput();
 //  matrix::matrix_utils::DataOutput::Task5_DifferentOmegas();
 
+//  matrix_tests::TestQr();
+
+  std::vector<std::vector<double>> v = {{5, 3, -18, -3},
+                                        {1, -82.7, 101.7, 81.7},
+                                        {4, -146.2, 168.2, 146.2},
+                                        {-8, -8, 0, 7}};
+  Matrix m(v);
+  m.CountUpperHessenbergMatrix();
+  std::cout << m.GetUpperHessenbergMatrix();
+
 //  int matrix_size;
 //  while (true) {
 //    std::cout << "Enter matrix size:" << std::endl;
