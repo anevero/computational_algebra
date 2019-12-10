@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
-#include <future>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -24,6 +23,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <thread>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -227,7 +227,7 @@ class Matrix {
   // should have cells with eigenvalues on the diagonal.
   // If Hessenberg matrix hasn't been counted yet, runs CountUpperHessenberg
   // Matrix() method.
-  void RunQRAlgorithm();
+  void RunQRAlgorithmIteration();
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -1300,6 +1300,10 @@ void Matrix<T>::CountQrDecomposition() {
     for (int i = j + 1; i < size; ++i) {
       // Making matrix[i][j] element equal to zero.
 
+      if (std::abs(R_matrix_QR_[i][j]) < epsilon_) {
+        continue;
+      }
+
       T divisor = std::sqrt(R_matrix_QR_[i][j] * R_matrix_QR_[i][j] +
           R_matrix_QR_[j][j] * R_matrix_QR_[j][j]);
 
@@ -1356,6 +1360,10 @@ void Matrix<T>::CountUpperHessenbergMatrix() {
       // from the left and from the right (so the new matrix will be similar
       // to it and will have all the eigenvalues saved).
 
+      if (std::abs(hessenberg_matrix_[i][j]) < epsilon_) {
+        continue;
+      }
+
       T divisor = std::sqrt(
           hessenberg_matrix_[j + 1][j] * hessenberg_matrix_[j + 1][j] +
               hessenberg_matrix_[i][j] * hessenberg_matrix_[i][j]);
@@ -1376,6 +1384,52 @@ void Matrix<T>::CountUpperHessenbergMatrix() {
 
       hessenberg_matrix_[i][j] = 0;
     }
+  }
+}
+
+template<class T>
+void Matrix<T>::RunQRAlgorithmIteration() {
+  if (hessenberg_matrix_.empty()) {
+    CountUpperHessenbergMatrix();
+  }
+
+  int size = rows_;
+
+  // This vector stores info about (size - 1) rotation matrices, which were
+  // used to get R matrix from QR decomposition of the Hessenberg matrix.
+  // Hessenberg matrix will be replaced with RQ^T in O(n^2) time.
+  std::vector<std::tuple<T, T, int, int>> rotation_matrices;
+
+  for (int i = 1; i < size; ++i) {
+    // Making matrix[i][i - 1] element equal to zero.
+
+    T divisor = std::sqrt(
+        hessenberg_matrix_[i][i - 1] * hessenberg_matrix_[i][i - 1] +
+            hessenberg_matrix_[i - 1][i - 1]
+                * hessenberg_matrix_[i - 1][i - 1]);
+
+    if (std::abs(divisor) < epsilon_) {
+      throw std::runtime_error(
+          "This algorithm can't be applied to this matrix.");
+    }
+
+    T cos = hessenberg_matrix_[i - 1][i - 1] / divisor;
+    T sin = -1 * hessenberg_matrix_[i][i - 1] / divisor;
+
+    MultiplyMatrixByRotation_Left(&hessenberg_matrix_,
+                                  sin, cos, i, i - 1, size);
+    rotation_matrices.emplace_back(sin, cos, i, i - 1);
+
+    hessenberg_matrix_[i][i - 1] = 0;
+  }
+
+  for (int i = 0; i < size - 1; ++i) {
+    MultiplyMatrixByRotation_Right(&hessenberg_matrix_,
+                                   -std::get<0>(rotation_matrices[i]),
+                                   std::get<1>(rotation_matrices[i]),
+                                   std::get<2>(rotation_matrices[i]),
+                                   std::get<3>(rotation_matrices[i]),
+                                   size);
   }
 }
 
