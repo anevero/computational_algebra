@@ -243,8 +243,8 @@ class Matrix {
 
 template<class T>
 Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
-  : matrix_(std::move(matrix)),
-    epsilon_(epsilon) {
+    : matrix_(std::move(matrix)),
+      epsilon_(epsilon) {
   static_assert(std::is_floating_point_v<T>,
                 "Matrix must contain floating-point numerical values.");
   if (matrix_.empty() || matrix_[0].empty()) {
@@ -286,7 +286,7 @@ template<class T>
 Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
-      "Matrices have different sizes; the sum can't be counted.");
+        "Matrices have different sizes; the sum can't be counted.");
   }
 
   Matrix<T> result(matrix_, std::max(epsilon_, other.epsilon_));
@@ -302,7 +302,7 @@ template<class T>
 Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
-      "Matrices have different sizes; the difference can't be counted.");
+        "Matrices have different sizes; the difference can't be counted.");
   }
 
   Matrix<T> result(matrix_, std::max(epsilon_, other.epsilon_));
@@ -318,17 +318,39 @@ template<class T>
 Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
   if (columns_ != other.rows_) {
     throw std::runtime_error(
-      "Matrices are not consistent; the product can't be counted.");
+        "Matrices are not consistent; the product can't be counted.");
   }
 
   std::vector<std::vector<T>> result(rows_, std::vector<T>(other.columns_, 0));
-  for (int i = 0; i < rows_; ++i) {
-    for (int j = 0; j < other.columns_; ++j) {
-      for (int k = 0; k < columns_; ++k) {
-        result[i][j] += matrix_[i][k] * other.matrix_[k][j];
-      }
-    }
+
+  int number_of_threads = static_cast<int>(std::thread::hardware_concurrency());
+  number_of_threads = (number_of_threads == 0) ? 8 : number_of_threads;
+  std::vector<std::thread> threads(number_of_threads);
+  int rows_per_thread;
+  int current_row = 0;
+  int rows_remaining = rows_;
+
+  for (int i = 0; i < number_of_threads; ++i) {
+    rows_per_thread = rows_remaining / (number_of_threads - i);
+    threads[i] = std::thread(
+        [this, &result, &other, current_row, rows_per_thread]() {
+          for (int r = current_row; r < current_row + rows_per_thread; ++r) {
+            for (int j = 0; j < other.columns_; ++j) {
+              for (int k = 0; k < columns_; ++k) {
+                result[r][j] += matrix_[r][k] * other.matrix_[k][j];
+              }
+            }
+          }
+        });
+
+    current_row += rows_per_thread;
+    rows_remaining -= rows_per_thread;
   }
+
+  for (int i = 0; i < number_of_threads; ++i) {
+    threads[i].join();
+  }
+
   return Matrix<T>(result, std::max(epsilon_, other.epsilon_));
 }
 
@@ -450,7 +472,7 @@ void Matrix<T>::CountTluDecomposition() {
     int index_of_biggest = i;
     for (int j = i; j < size; ++j) {
       if (std::abs(U_matrix_TLU_[j][i])
-        > std::abs(U_matrix_TLU_[index_of_biggest][i])) {
+          > std::abs(U_matrix_TLU_[index_of_biggest][i])) {
         index_of_biggest = j;
       }
     }
@@ -541,7 +563,7 @@ void Matrix<T>::CountInverseMatrix() {
 
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   std::vector<Matrix<T>> identity_columns(
-    size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
+      size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
   for (int i = 0; i < size; ++i) {
     identity_columns[i].matrix_[i][0] = 1;
   }
@@ -562,16 +584,16 @@ void Matrix<T>::CountInverseMatrix() {
   for (int i = 0; i < number_of_threads; ++i) {
     columns_per_thread = columns_remaining / (number_of_threads - i);
     threads[i] = std::thread(
-      [this, &identity_columns, current_column, columns_per_thread, size]() {
-        for (int k = current_column;
-             k < current_column + columns_per_thread;
-             ++k) {
-          auto inverse_column = SolveSystem(identity_columns[k]).matrix_;
-          for (int j = 0; j < size; ++j) {
-            inverse_matrix_[j][k] = inverse_column[j][0];
+        [this, &identity_columns, current_column, columns_per_thread, size]() {
+          for (int k = current_column;
+               k < current_column + columns_per_thread;
+               ++k) {
+            auto inverse_column = SolveSystem(identity_columns[k]).matrix_;
+            for (int j = 0; j < size; ++j) {
+              inverse_matrix_[j][k] = inverse_column[j][0];
+            }
           }
-        }
-      });
+        });
 
     current_column += columns_per_thread;
     columns_remaining -= columns_per_thread;
@@ -645,7 +667,7 @@ void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
       T_matrix_TLU_.clear();
       T_inverse_matrix_TLU_.clear();
       throw std::runtime_error(
-        "This algorithm isn't suitable for this matrix.");
+          "This algorithm isn't suitable for this matrix.");
     }
 
     // Updating the current column in L matrix. Takes O(n) time.
@@ -710,7 +732,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
 
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
   std::vector<Matrix<T>> identity_columns(
-    size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
+      size, Matrix<T>(std::vector<std::vector<T>>(size, std::vector<T>(1, 0))));
   for (int i = 0; i < size; ++i) {
     identity_columns[i].matrix_[i][0] = 1;
   }
@@ -731,17 +753,17 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
   for (int i = 0; i < number_of_threads; ++i) {
     columns_per_thread = columns_remaining / (number_of_threads - i);
     threads[i] = std::thread(
-      [this, &identity_columns, current_column, columns_per_thread, size]() {
-        for (int k = current_column;
-             k < current_column + columns_per_thread;
-             ++k) {
-          auto inverse_column =
-            SolveSystem_AlmostTriangular(identity_columns[k]).matrix_;
-          for (int j = 0; j < size; ++j) {
-            inverse_matrix_[j][k] = inverse_column[j][0];
+        [this, &identity_columns, current_column, columns_per_thread, size]() {
+          for (int k = current_column;
+               k < current_column + columns_per_thread;
+               ++k) {
+            auto inverse_column =
+                SolveSystem_AlmostTriangular(identity_columns[k]).matrix_;
+            for (int j = 0; j < size; ++j) {
+              inverse_matrix_[j][k] = inverse_column[j][0];
+            }
           }
-        }
-      });
+        });
 
     current_column += columns_per_thread;
     columns_remaining -= columns_per_thread;
@@ -760,7 +782,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
   int size = rows_;
   inverse_matrix_ = std::vector<std::vector<T>>(size, std::vector<T>(size));
   Matrix<T> identity_column(
-    std::vector<std::vector<T>>(size, std::vector<T>(1, 0)));
+      std::vector<std::vector<T>>(size, std::vector<T>(1, 0)));
 
   for (int i = 0; i < size; ++i) {
     identity_column.matrix_[i][0] = 1;
@@ -838,25 +860,25 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
       rows_per_thread = rows_remaining / (number_of_threads - j);
       if (rows_per_thread == 0) continue;
       thread_pool.Schedule(
-        [this, &a_matrix, &rows_completed, &mutex, &rows_completed_cv,
-          current_row, rows_per_thread, size, i]() {
-          for (int k = current_row; k < current_row + rows_per_thread; ++k) {
-            if (std::abs(a_matrix[i][i]) < epsilon_) {
-              throw std::runtime_error(
-                "Optimized algorithm cannot be applied to "
-                "this matrix.");
+          [this, &a_matrix, &rows_completed, &mutex, &rows_completed_cv,
+              current_row, rows_per_thread, size, i]() {
+            for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+              if (std::abs(a_matrix[i][i]) < epsilon_) {
+                throw std::runtime_error(
+                    "Optimized algorithm cannot be applied to "
+                    "this matrix.");
+              }
+              auto multiplier = a_matrix[k][i] / a_matrix[i][i];
+              for (int l = 0; l < size; ++l) {
+                inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
+              }
             }
-            auto multiplier = a_matrix[k][i] / a_matrix[i][i];
-            for (int l = 0; l < size; ++l) {
-              inverse_matrix_[k][l] -= multiplier * inverse_matrix_[i][l];
+            {
+              std::lock_guard<std::mutex> locker(mutex);
+              rows_completed += rows_per_thread;
+              rows_completed_cv.notify_one();
             }
-          }
-          {
-            std::lock_guard<std::mutex> locker(mutex);
-            rows_completed += rows_per_thread;
-            rows_completed_cv.notify_one();
-          }
-        });
+          });
       current_row += rows_per_thread;
       rows_remaining -= rows_per_thread;
     }
@@ -871,14 +893,14 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
     rows_per_thread = rows_remaining / (number_of_threads - i);
     if (rows_per_thread == 0) continue;
     thread_pool.Schedule(
-      [this, &a_matrix, current_row, rows_per_thread, size]() {
-        for (int k = current_row; k < current_row + rows_per_thread; ++k) {
-          auto multiplier = a_matrix[k][k];
-          for (int j = 0; j < size; ++j) {
-            inverse_matrix_[k][j] /= multiplier;
+        [this, &a_matrix, current_row, rows_per_thread, size]() {
+          for (int k = current_row; k < current_row + rows_per_thread; ++k) {
+            auto multiplier = a_matrix[k][k];
+            for (int j = 0; j < size; ++j) {
+              inverse_matrix_[k][j] /= multiplier;
+            }
           }
-        }
-      });
+        });
     current_row += rows_per_thread;
     rows_remaining -= rows_per_thread;
   }
@@ -982,7 +1004,7 @@ void Matrix<T>::CountLdlDecomposition_Symmetric() {
       LT_matrix_LDL_.clear();
       D_matrix_LDL_.clear();
       throw std::runtime_error(
-        "LDL decomposition algorithm can't be applied to this matrix.");
+          "LDL decomposition algorithm can't be applied to this matrix.");
     }
 
     // Subtracting the current row from all the rows below (and filling the
@@ -1107,7 +1129,7 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
     if (std::abs(matrix[i][1]) < epsilon_) {
       throw std::runtime_error(
-        "This algorithm cannot be applied to this matrix.");
+          "This algorithm cannot be applied to this matrix.");
     }
 
     auto multiplier = (-1) * matrix[i + 1][0] / matrix[i][1];
@@ -1119,7 +1141,7 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 
   if (std::abs(matrix[rows_ - 1][1]) < epsilon_) {
     throw std::runtime_error(
-      "This algorithm cannot be applied to this matrix.");
+        "This algorithm cannot be applied to this matrix.");
   }
 
   // Going left and up.
