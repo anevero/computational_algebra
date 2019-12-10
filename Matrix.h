@@ -186,8 +186,17 @@ class Matrix {
   [[nodiscard]] Matrix<T> SolveSystem_Tridiagonal(Matrix<T> b) const;
 
 // ---------------------------------------------------------------------------
-// Getters for the results of TLU decomposition, LDL decomposition,
-// counting the inverse matrix and the condition number.
+// QR decomposition for any matrix.
+
+  // Counts QR decomposition of the matrix (using Givens method). Internal
+  // orthogonal matrices are multiplied efficiently (only two rows and two
+  // columns are changed) to improve time complexity.
+  // Time complexity is O(n^3).
+  void CountQrDecomposition();
+
+// ---------------------------------------------------------------------------
+// Getters for the results of TLU decomposition, LDL decomposition, QR
+// decomposition, counting the inverse matrix and the condition number.
 
   [[nodiscard]] Matrix<T> GetLMatrix_TLU() const;
   [[nodiscard]] Matrix<T> GetUMatrix_TLU() const;
@@ -200,6 +209,10 @@ class Matrix {
 
   [[nodiscard]] Matrix<T> GetLTMatrix_LDL() const;
   [[nodiscard]] Matrix<T> GetDMatrix_LDL() const;
+
+  // GetQMatrix returns Q matrix in normal (not transpose) state.
+  [[nodiscard]] Matrix<T> GetQMatrix_QR() const;
+  [[nodiscard]] Matrix<T> GetRMatrix_QR() const;
 
   [[nodiscard]] Matrix<T> GetInverseMatrix() const;
   std::optional<T> GetConditionNumber() const;
@@ -233,6 +246,14 @@ class Matrix {
   // To save the memory, this matrix is stored as a single-dimensional vector.
   // Number on the ith position points to the coordinate of 1 in the ith row.
   std::vector<int> D_matrix_LDL_{};
+
+// ---------------------------------------------------------------------------
+// Variables connected with QR decomposition.
+
+  // Q matrix is stored in transpose state (so to get Q matrix for A = QR
+  // equality you need to transpose Q_matrix_QR_).
+  std::vector<std::vector<T>> Q_matrix_QR_{};
+  std::vector<std::vector<T>> R_matrix_QR_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1159,8 +1180,74 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 }
 
 // ---------------------------------------------------------------------------
-// Getters for the results of TLU decomposition, counting the inverse matrix
-// and the condition number.
+// QR decomposition for any matrix.
+
+template<class T>
+void Matrix<T>::CountQrDecomposition() {
+  if (rows_ != columns_) {
+    throw std::runtime_error("Matrix is not square.");
+  }
+  int size = rows_;
+
+  R_matrix_QR_ = matrix_;
+  Q_matrix_QR_ = std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
+  for (int i = 0; i < size; ++i) {
+    Q_matrix_QR_[i][i] = 1;
+  }
+
+  // A function to multiply the matrix by the rotation matrix in O(n)
+  // time (matrix = rotation_matrix * matrix). We also try to make compiler
+  // apply vectorization here.
+  auto multiply_rotation =
+      [](std::vector<std::vector<T>>& matrix,
+         T sin, T cos,
+         int i, int j, int size) {
+        std::vector<T> new_j_row = matrix[j];
+        std::vector<T> new_i_row = matrix[j];
+
+        for (int k = 0; k < size; ++k) {
+          new_j_row[k] *= cos;
+        }
+        for (int k = 0; k < size; ++k) {
+          new_j_row[k] -= sin * matrix[i][k];
+        }
+        for (int k = 0; k < size; ++k) {
+          new_i_row[k] *= sin;
+        }
+        for (int k = 0; k < size; ++k) {
+          new_i_row[k] += cos * matrix[i][k];
+        }
+
+        matrix[j] = std::move(new_j_row);
+        matrix[i] = std::move(new_i_row);
+      };
+
+  for (int j = 0; j < size - 1; ++j) {
+    for (int i = j + 1; i < size; ++i) {
+      // Making matrix[i][j] element equal to zero.
+
+      T divisor = std::sqrt(R_matrix_QR_[i][j] * R_matrix_QR_[i][j] +
+          R_matrix_QR_[j][j] * R_matrix_QR_[j][j]);
+
+      if (divisor < epsilon_) {
+        throw std::runtime_error(
+            "Givens algorithm can't be applied to this matrix.");
+      }
+
+      T cos = R_matrix_QR_[j][j] / divisor;
+      T sin = -1 * R_matrix_QR_[i][j] / divisor;
+
+      multiply_rotation(Q_matrix_QR_, sin, cos, i, j, size);
+      multiply_rotation(R_matrix_QR_, sin, cos, i, j, size);
+
+      R_matrix_QR_[i][j] = 0;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Getters for the results of TLU, LDL, QR decompositions, counting the
+// inverse matrix and the condition number.
 
 template<class T>
 Matrix<T> Matrix<T>::GetLMatrix_TLU() const {
@@ -1205,6 +1292,16 @@ Matrix<T> Matrix<T>::GetDMatrix_LDL() const {
     d_matrix[i][i] = D_matrix_LDL_[i];
   }
   return Matrix(d_matrix, epsilon_);
+}
+
+template<class T>
+Matrix<T> Matrix<T>::GetQMatrix_QR() const {
+  return Matrix(Q_matrix_QR_, epsilon_).GetTranspose();
+}
+
+template<class T>
+Matrix<T> Matrix<T>::GetRMatrix_QR() const {
+  return Matrix(R_matrix_QR_, epsilon_);
 }
 
 template<class T>
