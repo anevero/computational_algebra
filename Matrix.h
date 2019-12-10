@@ -239,7 +239,10 @@ class Matrix {
   // are extracted from the Hessenberg matrix after applying QR algorithm to
   // it. If you haven't applied the algorithm, the results of these function
   // are undefined.
-  std::vector<std::complex<T>> ExtractEigenvaluesFromHessenbergMatrix() const;
+  // NOTE: it's recommended to use the same epsilon, as with RunQrAlgorithm()
+  // method. Otherwise the results can be incorrect.
+  std::vector<std::complex<T>>
+  ExtractEigenvaluesFromHessenbergMatrix(T epsilon = 0.00001) const;
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -1472,6 +1475,38 @@ void Matrix<T>::RunQrAlgorithm(T epsilon) {
   }
 
   std::clog << number_of_iterations << std::endl;
+}
+
+template<class T>
+std::vector<std::complex<T>>
+Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
+  if (hessenberg_matrix_.empty()) {
+    throw std::runtime_error("Hessenberg matrix hasn't been counted yet.");
+  }
+
+  int size = rows_;
+  std::vector<std::complex<T>> result;
+
+  for (int i = 0; i < size; ++i) {
+    if (i != size - 1 && std::abs(hessenberg_matrix_[i + 1][i]) > epsilon) {
+      T a = hessenberg_matrix_[i][i];
+      T b = hessenberg_matrix_[i][i + 1];
+      T c = hessenberg_matrix_[i + 1][i];
+      T d = hessenberg_matrix_[i + 1][i + 1];
+
+      T real_part = (a + d) / 2;
+      T imaginary_part =
+          std::sqrt(4 * a * d - 4 * b * c - (a + d) * (a + d)) / 2;
+
+      result.emplace_back(real_part, imaginary_part);
+      result.emplace_back(real_part, -imaginary_part);
+      ++i;
+    } else {
+      result.emplace_back(hessenberg_matrix_[i][i], 0);
+    }
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
