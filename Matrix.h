@@ -16,6 +16,7 @@
 #include <complex>
 #include <condition_variable>
 #include <iostream>
+#include <future>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -28,6 +29,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <future>
 
 #include "Utils/ThreadPool.h"
 
@@ -56,6 +58,7 @@ class Matrix {
   Matrix operator-(const Matrix& other) const;
   Matrix operator*(const Matrix& other) const;
   Matrix operator*(T number) const;
+  Matrix operator/(T number) const;
   template<class U>
   friend Matrix<U> operator*(U number, const Matrix<U>& matrix);
 
@@ -69,6 +72,7 @@ class Matrix {
 
   void CountNorm();
   std::optional<T> GetNorm() const;
+  T CountAndGetNorm();
 
 // ---------------------------------------------------------------------------
 // Getters.
@@ -243,6 +247,13 @@ class Matrix {
   // method. Otherwise the results can be incorrect.
   std::vector<std::complex<T>>
   ExtractEigenvaluesFromHessenbergMatrix(T epsilon = 0.00001) const;
+
+// ---------------------------------------------------------------------------
+// Power iteration algorithm for any matrix. Allows to get the eigenvalue with
+// maximum module and the corresponding eigenvector.
+
+  std::vector<std::tuple<Matrix<T>, T>>
+  GetPowerIterationResults(T epsilon = 0.00001) const;
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -455,6 +466,17 @@ Matrix<T> Matrix<T>::operator*(T number) const {
   return result;
 }
 
+template<class T>
+Matrix<T> Matrix<T>::operator/(T number) const {
+  Matrix<T> result(matrix_, epsilon_);
+  for (int i = 0; i < rows_; ++i) {
+    for (int j = 0; j < columns_; ++j) {
+      result.matrix_[i][j] /= number;
+    }
+  }
+  return result;
+}
+
 template<class U>
 Matrix<U> operator*(U number, const Matrix<U>& matrix) {
   return matrix.operator*(number);
@@ -510,6 +532,14 @@ void Matrix<T>::CountNorm() {
 template<class T>
 std::optional<T> Matrix<T>::GetNorm() const {
   return norm_;
+}
+
+template<class T>
+T Matrix<T>::CountAndGetNorm() {
+  if (!norm_.has_value()) {
+    CountNorm();
+  }
+  return norm_.value();
 }
 
 // ---------------------------------------------------------------------------
@@ -1341,8 +1371,7 @@ void Matrix<T>::CountQrDecomposition() {
 }
 
 // ---------------------------------------------------------------------------
-// QR algorithm for any matrix (based on upper Hessenberg matrices). Allows to
-// get all the eigenvalues of the matrix.
+// QR algorithm for any matrix (based on upper Hessenberg matrices).
 
 template<class T>
 bool Matrix<T>::IsUpperHessenberg() const {
@@ -1460,7 +1489,7 @@ void Matrix<T>::RunQrAlgorithm(T epsilon) {
 
   int number_of_iterations = 0;
 
-  while (one_more_iteration) {
+  while (one_more_iteration && number_of_iterations < 50000000) {
     RunQRAlgorithmIteration();
     ++number_of_iterations;
 
@@ -1504,6 +1533,101 @@ Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
     } else {
       result.emplace_back(hessenberg_matrix_[i][i], 0);
     }
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Power iteration algorithm for any matrix.
+
+template<class T>
+std::vector<std::tuple<Matrix<T>, T>>
+Matrix<T>::GetPowerIterationResults(T epsilon) const {
+  if (rows_ != columns_) {
+    throw std::runtime_error("Matrix is not square.");
+  }
+
+  const int max_number_of_iterations = 1500;
+
+  std::vector<std::vector<T>> u_vector(rows_, std::vector<T>(1, 0));
+  std::vector<std::vector<T>> zero_vector(rows_, std::vector<T>(1, 0));
+  u_vector[0][0] = 1;
+
+  Matrix zero_matrix(zero_vector);
+
+  auto vector_max_value = [](const Matrix<T>& vector) -> T {
+    int size = vector.matrix_.size();
+    T value = vector.matrix_[0][0];
+    for (int i = 0; i < size; ++i) {
+      value = (std::abs(value) < std::abs(vector.matrix_[i][0]))
+              ? vector.matrix_[i][0] : value;
+    }
+    return value;
+  };
+
+  auto iterations =
+      [this, vector_max_value, &u_vector, &zero_matrix,
+          max_number_of_iterations, epsilon](bool sign) ->
+          std::tuple<Matrix<T>, T> {
+        T lambda = 0;
+        Matrix u(u_vector);
+        Matrix v(u_vector);
+        Matrix this_multiply_v = operator*(v);
+
+        int number_of_iterations = 0;
+
+        while ((this_multiply_v - lambda * v).CountAndGetNorm() > epsilon) {
+          v = this_multiply_v;
+          u = operator*(v);
+
+          lambda = std::sqrt(std::abs(vector_max_value(u)));
+          if (sign) {
+            lambda = -lambda;
+          }
+
+          v = lambda * v + u;
+          v = v / vector_max_value(v);
+
+          this_multiply_v = operator*(v);
+
+          ++number_of_iterations;
+          if (number_of_iterations > max_number_of_iterations) {
+            return {zero_matrix, 0};
+          }
+        }
+
+        return {v, lambda};
+      };
+
+  std::promise<std::tuple<Matrix<T>, T>> first_completed;
+  std::promise<std::tuple<Matrix<T>, T>> second_completed;
+
+  auto first_future = first_completed.get_future();
+  auto second_future = second_completed.get_future();
+
+  std::thread([&iterations](
+      std::promise<std::tuple<Matrix<T>, T>>& first_completed) {
+    auto result = iterations(false);
+    first_completed.set_value(result);
+  }, std::ref(first_completed)).join();
+
+  std::thread([&iterations](
+      std::promise<std::tuple<Matrix<T>, T>>& second_completed) {
+    auto result = iterations(true);
+    second_completed.set_value(result);
+  }, std::ref(second_completed)).join();
+
+  std::vector<std::tuple<Matrix<T>, T>> result = {};
+
+  result.push_back(first_future.get());
+  if (std::get<0>(result.back()) == zero_matrix) {
+    result.pop_back();
+  }
+
+  result.push_back(second_future.get());
+  if (std::get<0>(result.back()) == zero_matrix) {
+    result.pop_back();
   }
 
   return result;
