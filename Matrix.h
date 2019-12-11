@@ -24,12 +24,12 @@
 #include <optional>
 #include <stdexcept>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <future>
 
 #include "Utils/ThreadPool.h"
 
@@ -227,12 +227,16 @@ class Matrix {
   // Time complexity is O(n^3).
   void CountUpperHessenbergMatrix();
 
+ private:
   // Runs one iteration of QR algorithm. One iteration updates current
   // Hessenberg matrix (with O(n^2) time).
   // If Hessenberg matrix hasn't been counted yet, runs CountUpperHessenberg
   // Matrix() method.
+  // Saves the information about rotation matrices in the corresponding private
+  // field of the class.
   void RunQRAlgorithmIteration();
 
+ public:
   // Runs QR algorithm iterations, until the Hessenberg matrix converges to the
   // matrix with eigenvalues on the diagonal. Convergence condition: for every
   // item on the diagonal the difference between it and its version at the
@@ -327,13 +331,10 @@ class Matrix {
   // have all the eigenvalues at the cells of the main diagonal.
   std::vector<std::vector<T>> hessenberg_matrix_{};
 
-  // Q matrix from QR decomposition of the upper Hessenberg matrix. Used inside
-  // QR algorithm. Stored in transpose state.
-  std::vector<std::vector<T>> hessenberg_Q_matrix_{};
-
-  // R matrix from QR decomposition of the upper Hessenberg matrix. Used inside
-  // QR algorithm.
-  std::vector<std::vector<T>> hessenberg_R_matrix_{};
+  // Consists of (size - 1) entries, which were used at the last iteration of
+  // QR algorithm to get R matrix from QR decomposition of the Hessenberg
+  // matrix. Used to extract eigenvectors after finishing iterating.
+  std::vector<std::tuple<T, T, int, int>> hessenberg_rotation_matrices_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1438,11 +1439,7 @@ void Matrix<T>::RunQRAlgorithmIteration() {
   }
 
   int size = rows_;
-
-  // This vector stores info about (size - 1) rotation matrices, which were
-  // used to get R matrix from QR decomposition of the Hessenberg matrix.
-  // Hessenberg matrix will be replaced with RQ^T in O(n^2) time.
-  std::vector<std::tuple<T, T, int, int>> rotation_matrices;
+  hessenberg_rotation_matrices_.clear();
 
   for (int i = 1; i < size; ++i) {
     // Making matrix[i][i - 1] element equal to zero.
@@ -1462,18 +1459,19 @@ void Matrix<T>::RunQRAlgorithmIteration() {
 
     MultiplyMatrixByRotation_Left(&hessenberg_matrix_,
                                   sin, cos, i, i - 1, size);
-    rotation_matrices.emplace_back(sin, cos, i, i - 1);
+    hessenberg_rotation_matrices_.emplace_back(sin, cos, i, i - 1);
 
     hessenberg_matrix_[i][i - 1] = 0;
   }
 
   for (int i = 0; i < size - 1; ++i) {
-    MultiplyMatrixByRotation_Right(&hessenberg_matrix_,
-                                   -std::get<0>(rotation_matrices[i]),
-                                   std::get<1>(rotation_matrices[i]),
-                                   std::get<2>(rotation_matrices[i]),
-                                   std::get<3>(rotation_matrices[i]),
-                                   size);
+    MultiplyMatrixByRotation_Right(
+        &hessenberg_matrix_,
+        -std::get<0>(hessenberg_rotation_matrices_[i]),
+        std::get<1>(hessenberg_rotation_matrices_[i]),
+        std::get<2>(hessenberg_rotation_matrices_[i]),
+        std::get<3>(hessenberg_rotation_matrices_[i]),
+        size);
   }
 }
 
@@ -1486,7 +1484,6 @@ void Matrix<T>::RunQrAlgorithm(T epsilon) {
   int size = rows_;
   std::vector<T> previous_values(size, 0);
   bool one_more_iteration = true;
-
   int number_of_iterations = 0;
 
   while (one_more_iteration && number_of_iterations < 50000000) {
@@ -1502,8 +1499,6 @@ void Matrix<T>::RunQrAlgorithm(T epsilon) {
       previous_values[i] = hessenberg_matrix_[i][i];
     }
   }
-
-  std::clog << number_of_iterations << std::endl;
 }
 
 template<class T>
@@ -1514,7 +1509,7 @@ Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
   }
 
   int size = rows_;
-  std::vector<std::complex<T>> result;
+  std::vector<std::complex<T>> eigenvalues;
 
   for (int i = 0; i < size; ++i) {
     if (i != size - 1 && std::abs(hessenberg_matrix_[i + 1][i]) > epsilon) {
@@ -1527,15 +1522,15 @@ Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
       T imaginary_part =
           std::sqrt(4 * a * d - 4 * b * c - (a + d) * (a + d)) / 2;
 
-      result.emplace_back(real_part, imaginary_part);
-      result.emplace_back(real_part, -imaginary_part);
+      eigenvalues.emplace_back(real_part, imaginary_part);
+      eigenvalues.emplace_back(real_part, -imaginary_part);
       ++i;
     } else {
-      result.emplace_back(hessenberg_matrix_[i][i], 0);
+      eigenvalues.emplace_back(hessenberg_matrix_[i][i], 0);
     }
   }
 
-  return result;
+  return eigenvalues;
 }
 
 // ---------------------------------------------------------------------------
