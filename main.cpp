@@ -5,6 +5,7 @@
 #include "Utils/DataOutput.h"
 
 using namespace matrix;
+using namespace polynomial;
 
 int main() {
 //  matrix::matrix_tests::TestEverything();
@@ -26,13 +27,13 @@ int main() {
 //                                        {2, 3, -1},
 //                                        {4, -1, 1}};
 
-  std::vector<std::vector<double>> v = {{2, 2, 4},
-                                        {2, 3, -1},
-                                        {4, -1, 1}};
+//  std::vector<std::vector<double>> v = {{2, 2, 4},
+//                                        {2, 3, -1},
+//                                        {4, -1, 1}};
 
-  Matrix m(v);
-  m.CountFrobeniusMatrix();
-  std::cout << m.GetFrobeniusMatrix() << std::endl;
+//  Matrix m(v);
+//  m.CountFrobeniusMatrix();
+//  std::cout << m.GetFrobeniusMatrix() << std::endl;
 
 //  std::fstream in("../input_files/task6_input2");
 //  double a;
@@ -57,6 +58,12 @@ int main() {
 //  for (auto& item : t) {
 //    std::cout << item.value << std::endl << item.vector << std::endl;
 //  }
+
+  Polynomial<int> p({1, 0, 1, 2});
+  Polynomial<int> q({-1, 0, 1});
+
+  std::cout << 5 * p * q;
+
 
   return 0;
 }

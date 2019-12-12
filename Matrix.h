@@ -31,11 +31,13 @@
 #include <utility>
 #include <vector>
 
+#include "Polynomial.h"
 #include "Utils/ThreadPool.h"
 #include "Utils/Utils.h"
 
 namespace matrix {
 
+using polynomial::Polynomial;
 using matrix_utils::ThreadPool;
 using matrix_utils::Equal;
 
