@@ -228,8 +228,6 @@ class Matrix {
 // QR algorithm for any matrix (based on upper Hessenberg matrices). Allows to
 // get all the eigenvalues of the matrix.
 
-  bool IsUpperHessenberg() const;
-
   // Counts an upper Hessenberg (almost triangular) matrix, which is similar
   // to this.
   // Time complexity is O(n^3).
@@ -261,6 +259,19 @@ class Matrix {
   // method. Otherwise the results can be incorrect.
   std::vector<Eigenvector>
   GetEigenvectorsFromHessenbergMatrix(T epsilon = 0.00001) const;
+
+// ---------------------------------------------------------------------------
+// Danilevsky algorithm for any matrix (based on upper Frobenius matrices).
+// Allows to get all the eigenvalues and eigenvectors of the matrix.
+
+ private:
+  // Counts the Frobenius (possibly block) matrix, which is similar to this.
+  // Time complexity is O(n^3).
+  void CountFrobeniusMatrixInternal(int size);
+
+ public:
+  // Public interface for the function above.
+  void CountFrobeniusMatrix();
 
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix. Allows to get the eigenvalue with
@@ -302,6 +313,9 @@ class Matrix {
 
   // Returns an upper Hessenberg matrix, similar to this.
   [[nodiscard]] Matrix<T> GetUpperHessenbergMatrix() const;
+
+  // Returns the Frobenius matrix, similar to this.
+  [[nodiscard]] Matrix<T> GetFrobeniusMatrix() const;
 
   [[nodiscard]] Matrix<T> GetInverseMatrix() const;
   std::optional<T> GetConditionNumber() const;
@@ -355,6 +369,19 @@ class Matrix {
   // Stored Q matrix, which is got after applying QR algorithm (this Q
   // matrix will consist of eigenvectors).
   std::vector<std::vector<T>> hessenberg_rotation_matrix_{};
+
+// ---------------------------------------------------------------------------
+// Variables connected with Danilevsky algorithm.
+
+  // Frobenius (it's possible, that block) matrix, which is similar to this
+  // matrix. Counting this matrix is a part of the Danilevsky algorithm for
+  // counting the characteristic polynomial of the matrix.
+  std::vector<std::vector<T>> frobenius_matrix_;
+
+  // If Frobenius matrix is found as F = S^{-1} A S, then this matrix is S.
+  // It's necessary for restoring eigenvectors after applying Danilevsky
+  // algorithm and counting eigenvalues.
+  std::vector<std::vector<T>> frobenius_transition_matrix_;
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1431,23 +1458,6 @@ void Matrix<T>::CountQrDecomposition() {
 
 template<class T>
 requires std::is_floating_point_v<T>
-bool Matrix<T>::IsUpperHessenberg() const {
-  if (rows_ != columns_) return false;
-  int size = rows_;
-
-  for (int i = 0; i < size - 2; ++i) {
-    for (int j = i + 2; j < size; ++j) {
-      if (std::abs(matrix_[i][j]) > epsilon_) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
-template<class T>
-requires std::is_floating_point_v<T>
 void Matrix<T>::CountUpperHessenbergMatrix() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1628,6 +1638,88 @@ Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
 }
 
 // ---------------------------------------------------------------------------
+// Danilevsky algorithm for any matrix.
+
+template<class T>
+requires std::is_floating_point_v<T>
+void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
+  int current_row = size - 1;
+  int current_column = size - 2;
+
+  while (current_row > 0) {
+    int non_zero_column = current_column;
+    while (non_zero_column >= 0 && Equal(
+        frobenius_matrix_[current_row][non_zero_column], T(), epsilon_)) {
+      --non_zero_column;
+    }
+    if (non_zero_column == -1) {
+      return CountFrobeniusMatrixInternal(current_row);
+    }
+    if (non_zero_column != current_column) {
+      for (int i = 0; i < size; ++i) {
+        std::swap(frobenius_matrix_[i][non_zero_column],
+                  frobenius_matrix_[i][current_column]);
+        std::swap(frobenius_transition_matrix_[i][non_zero_column],
+                  frobenius_transition_matrix_[i][current_column]);
+      }
+      for (int i = 0; i < size; ++i) {
+        std::swap(frobenius_matrix_[non_zero_column][i],
+                  frobenius_matrix_[current_column][i]);
+      }
+    }
+
+    auto divisor = frobenius_matrix_[current_row][current_column];
+    for (int i = 0; i < current_row; ++i) {
+      frobenius_matrix_[i][current_column] /= divisor;
+      frobenius_transition_matrix_[i][current_column] /= divisor;
+    }
+    for (int i = 0; i < size; ++i) {
+      frobenius_matrix_[current_column][i] *= divisor;
+    }
+    frobenius_matrix_[current_row][current_column] = 1;
+
+    for (int i = 0; i < size; ++i) {
+      if (i == current_column) continue;
+      auto multiplier = frobenius_matrix_[current_row][i];
+      for (int j = 0; j < current_row; ++j) {
+        frobenius_matrix_[j][i] -=
+            multiplier * frobenius_matrix_[j][current_column];
+      }
+      for (int j = 0; j < current_row; ++j) {
+        frobenius_transition_matrix_[j][i] -=
+            multiplier * frobenius_transition_matrix_[j][current_column];
+      }
+      frobenius_matrix_[current_row][i] = 0;
+      for (int j = 0; j < size; ++j) {
+        frobenius_matrix_[current_column][j] +=
+            multiplier * frobenius_matrix_[i][j];
+      }
+    }
+
+    --current_row;
+    --current_column;
+  }
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+void Matrix<T>::CountFrobeniusMatrix() {
+  if (rows_ != columns_) {
+    throw std::runtime_error("Matrix is not square.");
+  }
+  int size = rows_;
+  frobenius_matrix_ = matrix_;
+
+  frobenius_transition_matrix_ =
+      std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
+  for (int i = 0; i < size; ++i) {
+    frobenius_transition_matrix_[i][i] = 1;
+  }
+
+  return CountFrobeniusMatrixInternal(size);
+}
+
+// ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix.
 
 template<class T>
@@ -1789,6 +1881,12 @@ template<class T>
 requires std::is_floating_point_v<T>
 Matrix<T> Matrix<T>::GetUpperHessenbergMatrix() const {
   return Matrix(hessenberg_matrix_, epsilon_);
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+Matrix<T> Matrix<T>::GetFrobeniusMatrix() const {
+  return Matrix(frobenius_matrix_, epsilon_);
 }
 
 template<class T>
