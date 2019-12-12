@@ -16,7 +16,7 @@
 
 namespace matrix::matrix_tasks {
 
-template<class T>
+template<class T> requires std::is_floating_point_v<T>
 class Task1 {
  public:
   struct Task1_Data {
@@ -36,14 +36,14 @@ class Task1 {
   static void FirstMatrix();
   static void SecondMatrix();
   [[nodiscard]] static std::vector<Task1_Data> RandomInput(
-    int max_matrix_size = 2100);
+      int max_matrix_size = 2100);
   [[nodiscard]] static auto SingleVsMultiThread(int max_matrix_size = 3000);
   [[nodiscard]] static auto TimeForAlmostTriangularMatrix(int matrix_size);
 };
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task1<T>::FirstMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 1, first matrix." << std::endl;
   std::fstream in("../input_files/task1_input1");
   int size;
@@ -78,8 +78,8 @@ void Task1<T>::FirstMatrix() {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task1<T>::SecondMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 1, second matrix." << std::endl;
   std::fstream in("../input_files/task1_input2");
   int size;
@@ -108,9 +108,10 @@ void Task1<T>::SecondMatrix() {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
-  int max_matrix_size) {
-  static_assert(std::is_floating_point_v<T>);
+    int max_matrix_size) {
+  matrix_utils::SetRandomSeed(42);
 
   std::vector<Task1_Data> result{};
 
@@ -119,11 +120,11 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
 
     // Float, double and long double matrices.
     std::vector<std::vector<float>>
-      f_vector(size, std::vector<float>(size));
+        f_vector(size, std::vector<float>(size));
     std::vector<std::vector<double>>
-      d_vector(size, std::vector<double>(size));
+        d_vector(size, std::vector<double>(size));
     std::vector<std::vector<long double>>
-      ld_vector(size, std::vector<long double>(size));
+        ld_vector(size, std::vector<long double>(size));
 
     std::vector<double> time_common_f;
     std::vector<double> time_tlu_f;
@@ -138,7 +139,7 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
     // Generating random values for the matrix.
     for (int j = 0; j < size; ++j) {
       for (int k = 0; k < j + 2 && k < size; ++k) {
-        auto value = matrix_utils::Random();
+        auto value = matrix_utils::Random<long double>();
         f_vector[j][k] = value;
         d_vector[j][k] = value;
         ld_vector[j][k] = value;
@@ -194,28 +195,28 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
     Task1_Data data;
 
     data.time_common_f = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_common_f - t1_common_f).count();
+        t2_common_f - t1_common_f).count();
     data.time_tlu_f = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_tlu_f - t1_tlu_f).count();
+        t2_tlu_f - t1_tlu_f).count();
     data.time_triangular_f =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_triangular_f - t1_triangular_f).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_triangular_f - t1_triangular_f).count();
 
     data.time_common_d = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_common_d - t1_common_d).count();
+        t2_common_d - t1_common_d).count();
     data.time_tlu_d = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_tlu_d - t1_tlu_d).count();
+        t2_tlu_d - t1_tlu_d).count();
     data.time_triangular_d =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_triangular_d - t1_triangular_d).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_triangular_d - t1_triangular_d).count();
 
     data.time_common_ld = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_common_ld - t1_common_ld).count();
+        t2_common_ld - t1_common_ld).count();
     data.time_tlu_ld = std::chrono::duration_cast<std::chrono::microseconds>(
-      t2_tlu_ld - t1_tlu_ld).count();
+        t2_tlu_ld - t1_tlu_ld).count();
     data.time_triangular_ld =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_triangular_ld - t1_triangular_ld).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_triangular_ld - t1_triangular_ld).count();
 
     result.push_back(data);
   }
@@ -224,8 +225,9 @@ std::vector<typename Task1<T>::Task1_Data> Task1<T>::RandomInput(
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
-  static_assert(std::is_floating_point_v<T>);
+  matrix_utils::SetRandomSeed(42);
 
   std::vector<double> result_tlu_single_thread{};
   std::vector<double> result_tlu_multi_thread{};
@@ -236,12 +238,12 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
     std::cout << "Current size: " << size << std::endl;
 
     std::vector<std::vector<double>>
-      d_vector(size, std::vector<double>(size, 0));
+        d_vector(size, std::vector<double>(size, 0));
 
     // Generating random values for the matrix.
     for (int j = 0; j < size; ++j) {
       for (int k = 0; k < j + 2 && k < size; ++k) {
-        auto value = matrix_utils::Random();
+        auto value = matrix_utils::Random<double>();
         d_vector[j][k] = value;
       }
     }
@@ -261,28 +263,28 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
     auto t2_multi_thread_tlu = std::chrono::high_resolution_clock::now();
 
     auto
-      t1_single_thread_triangular = std::chrono::high_resolution_clock::now();
+        t1_single_thread_triangular = std::chrono::high_resolution_clock::now();
     d_single_thread_triangular.CountInverseMatrix_AlmostTriangular_SingleThread();
     auto
-      t2_single_thread_triangular = std::chrono::high_resolution_clock::now();
+        t2_single_thread_triangular = std::chrono::high_resolution_clock::now();
 
     auto t1_multi_thread_triangular = std::chrono::high_resolution_clock::now();
     d_multi_thread_triangular.CountInverseMatrix_AlmostTriangular();
     auto t2_multi_thread_triangular = std::chrono::high_resolution_clock::now();
 
     auto time_single_thread_tlu =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_single_thread_tlu - t1_single_thread_tlu).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_single_thread_tlu - t1_single_thread_tlu).count();
     auto time_multi_thread_tlu =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_multi_thread_tlu - t1_multi_thread_tlu).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_multi_thread_tlu - t1_multi_thread_tlu).count();
 
     auto time_single_thread_triangular =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_single_thread_triangular - t1_single_thread_triangular).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_single_thread_triangular - t1_single_thread_triangular).count();
     auto time_multi_thread_triangular =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-        t2_multi_thread_triangular - t1_multi_thread_triangular).count();
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t2_multi_thread_triangular - t1_multi_thread_triangular).count();
 
     result_tlu_single_thread.push_back(time_single_thread_tlu);
     result_tlu_multi_thread.push_back(time_multi_thread_tlu);
@@ -297,15 +299,16 @@ auto Task1<T>::SingleVsMultiThread(int max_matrix_size) {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 auto Task1<T>::TimeForAlmostTriangularMatrix(int matrix_size) {
-  static_assert(std::is_floating_point_v<T>);
+  matrix_utils::SetRandomSeed(42);
 
   std::vector<std::vector<T>>
-    m_vector(matrix_size, std::vector<T>(matrix_size));
+      m_vector(matrix_size, std::vector<T>(matrix_size));
 
   for (int j = 0; j < matrix_size; ++j) {
     for (int k = 0; k < j + 2 && k < matrix_size; ++k) {
-      m_vector[j][k] = matrix_utils::Random();
+      m_vector[j][k] = matrix_utils::Random<T>();
     }
   }
 

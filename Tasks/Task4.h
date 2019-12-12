@@ -17,7 +17,7 @@
 
 namespace matrix::matrix_tasks {
 
-template<class T>
+template<class T> requires std::is_floating_point_v<T>
 class Task4 {
  public:
   static void FirstMatrix();
@@ -25,8 +25,8 @@ class Task4 {
 };
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task4<T>::FirstMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 4, first matrix." << std::endl;
   std::fstream in("../input_files/task4_input1");
   int size;
@@ -66,8 +66,8 @@ void Task4<T>::FirstMatrix() {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task4<T>::SecondMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 4, second matrix." << std::endl;
   std::fstream in("../input_files/task4_input2");
   int size;

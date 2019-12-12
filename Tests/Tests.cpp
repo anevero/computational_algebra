@@ -3,6 +3,8 @@
 namespace matrix::matrix_tests {
 
 using matrix_utils::Random;
+using matrix_utils::RandomSquareMatrix;
+using matrix_utils::SetRandomSeed;
 
 void TestEverything() {
   TestTlu();
@@ -25,15 +27,11 @@ void TestEverything() {
 }
 
 void TestTlu(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<double>>
-      v(matrix_size, std::vector<double>(matrix_size));
+  SetRandomSeed(42);
+  std::vector<std::vector<double>> v;
 
   for (int k = 0; k < number_of_tests; ++k) {
-    for (int i = 0; i < matrix_size; ++i) {
-      for (int j = 0; j < matrix_size; ++j) {
-        v[i][j] = Random();
-      }
-    }
+    v = RandomSquareMatrix<double>(matrix_size);
 
     Matrix<double> m(v, 0.0001);
     m.CountTluDecomposition();
@@ -52,6 +50,8 @@ void TestTlu(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
+
   std::vector<std::vector<double>>
       v1(matrix_size, std::vector<double>(matrix_size));
   std::vector<std::vector<double>>
@@ -60,9 +60,9 @@ void TestSystemSolution(int number_of_tests, int matrix_size) {
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j < matrix_size; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<double>();
       }
-      v2[i][0] = Random();
+      v2[i][0] = Random<double>();
     }
 
     Matrix<double> a(v1, 0.0001);
@@ -84,8 +84,9 @@ void TestSystemSolution(int number_of_tests, int matrix_size) {
 }
 
 void TestInverse(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<double>>
-      v1(matrix_size, std::vector<double>(matrix_size));
+  SetRandomSeed(42);
+
+  std::vector<std::vector<double>> v1;
 
   std::vector<std::vector<double>>
       v2(matrix_size, std::vector<double>(matrix_size, 0));
@@ -96,11 +97,7 @@ void TestInverse(int number_of_tests, int matrix_size) {
   Matrix<double> id(v2);
 
   for (int k = 0; k < number_of_tests; ++k) {
-    for (int i = 0; i < matrix_size; ++i) {
-      for (int j = 0; j < matrix_size; ++j) {
-        v1[i][j] = Random();
-      }
-    }
+    v1 = RandomSquareMatrix<double>(matrix_size);
 
     Matrix<double> m(v1, 0.0001);
     m.CountInverseMatrix();
@@ -119,15 +116,12 @@ void TestInverse(int number_of_tests, int matrix_size) {
 }
 
 void TestTlu_AlmostTriangular(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<long double>>
-      v(matrix_size, std::vector<long double>(matrix_size, 0));
+  SetRandomSeed(42);
+
+  std::vector<std::vector<long double>> v;
 
   for (int k = 0; k < number_of_tests; ++k) {
-    for (int i = 0; i < matrix_size; ++i) {
-      for (int j = 0; j < i + 2 && j < matrix_size; ++j) {
-        v[i][j] = Random();
-      }
-    }
+    v = RandomSquareMatrix<long double>(matrix_size);
 
     Matrix<long double> m(v, 0.00001);
     m.CountTluDecomposition_AlmostTriangular();
@@ -146,6 +140,8 @@ void TestTlu_AlmostTriangular(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution_AlmostTriangular(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
+
   std::vector<std::vector<long double>>
       v1(matrix_size, std::vector<long double>(matrix_size, 0));
   std::vector<std::vector<long double>>
@@ -154,9 +150,9 @@ void TestSystemSolution_AlmostTriangular(int number_of_tests, int matrix_size) {
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j < i + 2 && j < matrix_size; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<long double>();
       }
-      v2[i][0] = Random();
+      v2[i][0] = Random<long double>();
     }
 
     Matrix<long double> a(v1, 0.00001);
@@ -178,6 +174,7 @@ void TestSystemSolution_AlmostTriangular(int number_of_tests, int matrix_size) {
 }
 
 void TestInverse_TLU_AlmostTriangular(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
   std::vector<std::vector<long double>>
       v1(matrix_size, std::vector<long double>(matrix_size, 0));
 
@@ -192,7 +189,7 @@ void TestInverse_TLU_AlmostTriangular(int number_of_tests, int matrix_size) {
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j < i + 2 && j < matrix_size; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<long double>();
       }
     }
 
@@ -213,6 +210,7 @@ void TestInverse_TLU_AlmostTriangular(int number_of_tests, int matrix_size) {
 }
 
 void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
   std::vector<std::vector<double>>
       v1(matrix_size, std::vector<double>(matrix_size, 0));
 
@@ -227,7 +225,7 @@ void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j < i + 2 && j < matrix_size; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<long double>();
       }
     }
 
@@ -248,13 +246,14 @@ void TestInverse_AlmostTriangular(int number_of_tests, int matrix_size) {
 }
 
 void TestLdl(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
   std::vector<std::vector<double>>
       v(matrix_size, std::vector<double>(matrix_size));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j <= i; ++j) {
-        v[i][j] = Random();
+        v[i][j] = Random<long double>();
         v[j][i] = v[i][j];
       }
     }
@@ -278,6 +277,7 @@ void TestLdl(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
   std::vector<std::vector<double>>
       v1(matrix_size, std::vector<double>(matrix_size));
   std::vector<std::vector<double>>
@@ -286,10 +286,10 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j <= i; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<double>();
         v1[j][i] = v1[i][j];
       }
-      v2[i][0] = Random();
+      v2[i][0] = Random<double>();
     }
 
     Matrix<double> a(v1, 0.0001);
@@ -314,16 +314,17 @@ void TestSystemSolution_Symmetric(int number_of_tests, int matrix_size) {
 }
 
 void TestSystemSolution_Tridiagonal(int number_of_tests, int matrix_size) {
+  SetRandomSeed(42);
   std::vector<std::vector<double>> v1(matrix_size, std::vector<double>(4));
   std::vector<std::vector<double>> v2(matrix_size, std::vector<double>(1));
 
   for (int k = 0; k < number_of_tests; ++k) {
     for (int i = 0; i < matrix_size; ++i) {
       for (int j = 0; j < 3; ++j) {
-        v1[i][j] = Random();
+        v1[i][j] = Random<double>();
       }
       v1[i][3] = 0;
-      v2[i][0] = Random();
+      v2[i][0] = Random<double>();
     }
 
     Matrix<double> a(v1, 0.00001);
@@ -373,15 +374,11 @@ void TestSystemSolution_Sor(int number_of_tests) {
 }
 
 void TestQr(int number_of_tests, int matrix_size) {
-  std::vector<std::vector<double>>
-      v(matrix_size, std::vector<double>(matrix_size));
+  SetRandomSeed(42);
+  std::vector<std::vector<double>> v;
 
   for (int k = 0; k < number_of_tests; ++k) {
-    for (int i = 0; i < matrix_size; ++i) {
-      for (int j = 0; j < matrix_size; ++j) {
-        v[i][j] = Random();
-      }
-    }
+    v = RandomSquareMatrix<double>(matrix_size);
 
     Matrix<double> m(v, 0.00001);
     m.CountQrDecomposition();

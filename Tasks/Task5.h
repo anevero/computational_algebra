@@ -9,7 +9,7 @@
 
 namespace matrix::matrix_tasks {
 
-template<class T>
+template<class T> requires std::is_floating_point_v<T>
 class Task5 {
  public:
   struct Task5Data {
@@ -28,6 +28,7 @@ class Task5 {
 };
 
 template<class T>
+requires std::is_floating_point_v<T>
 typename Task5<T>::Task5Data Task5<T>::SolveSystem(int n, T omega, T epsilon) {
   T old_first_x = 0;
   T old_median_x = 0;
@@ -36,16 +37,16 @@ typename Task5<T>::Task5Data Task5<T>::SolveSystem(int n, T omega, T epsilon) {
   T first_y, median_y, last_y;
 
   int max_number_of_iterations =
-    std::log(epsilon * n) / std::log(static_cast<double>(n - 1) / n);
+      std::log(epsilon * n) / std::log(static_cast<double>(n - 1) / n);
   int real_number_of_iterations = 0;
 
   for (int i = 0; i <= max_number_of_iterations; ++i) {
     new_first_x = (1 - old_last_x - (n - 2) * old_median_x) / n;
     new_median_x =
-      (1 - omega * new_first_x - (1 - omega) * old_first_x - old_last_x) / n;
+        (1 - omega * new_first_x - (1 - omega) * old_first_x - old_last_x) / n;
     new_last_x =
-      (1 - (n - 2) * (omega * new_median_x + (1 - omega) * old_median_x)
-        - omega * new_first_x - (1 - omega) * old_first_x) / n;
+        (1 - (n - 2) * (omega * new_median_x + (1 - omega) * old_median_x)
+            - omega * new_first_x - (1 - omega) * old_first_x) / n;
     old_first_x = new_first_x;
     old_median_x = new_median_x;
     old_last_x = new_last_x;
@@ -74,6 +75,7 @@ typename Task5<T>::Task5Data Task5<T>::SolveSystem(int n, T omega, T epsilon) {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 Matrix<T> Task5<T>::GetAMatrix(int n) {
   std::vector<std::vector<T>> result(n, std::vector<T>(n, 0));
   for (int i = 0; i < n; ++i) {
@@ -87,6 +89,7 @@ Matrix<T> Task5<T>::GetAMatrix(int n) {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 std::vector<std::vector<int>> Task5<T>::GetTime(T min_omega, T max_omega) {
   std::vector<T> omegas(3);
   omegas[0] = min_omega;

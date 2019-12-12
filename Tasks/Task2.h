@@ -16,7 +16,7 @@
 
 namespace matrix::matrix_tasks {
 
-template<class T>
+template<class T> requires std::is_floating_point_v<T>
 class Task2 {
  public:
   static void FirstMatrix();
@@ -25,8 +25,8 @@ class Task2 {
 };
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task2<T>::FirstMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 2, first matrix." << std::endl;
 
   std::fstream in("../input_files/task2_input1");
@@ -69,8 +69,8 @@ void Task2<T>::FirstMatrix() {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 void Task2<T>::SecondMatrix() {
-  static_assert(std::is_floating_point_v<T>);
   std::cout << "Task 2, second matrix." << std::endl;
 
   std::fstream in("../input_files/task2_input2");
@@ -113,8 +113,9 @@ void Task2<T>::SecondMatrix() {
 }
 
 template<class T>
+requires std::is_floating_point_v<T>
 auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
-  static_assert(std::is_floating_point_v<T>);
+  matrix_utils::SetRandomSeed(42);
 
   std::fstream in("../input_files/task2_input2");
   int size;
@@ -123,12 +124,12 @@ auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
   std::vector<std::vector<float>> a_vector_f(size, std::vector<float>(size));
   std::vector<std::vector<double>> a_vector_d(size, std::vector<double>(size));
   std::vector<std::vector<long double>>
-    a_vector_ld(size, std::vector<long double>(size));
+      a_vector_ld(size, std::vector<long double>(size));
 
   std::vector<std::vector<float>> b_vector_f(size, std::vector<float>(1));
   std::vector<std::vector<double>> b_vector_d(size, std::vector<double>(1));
   std::vector<std::vector<long double>>
-    b_vector_ld(size, std::vector<long double>(1));
+      b_vector_ld(size, std::vector<long double>(1));
 
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < size; ++j) {
@@ -152,13 +153,10 @@ auto Task2<T>::RandomBForSecondMatrix(int number_of_tests) {
   std::vector<T> result_d{};
   std::vector<T> result_ld{};
 
-  int seed = std::chrono::system_clock::now().time_since_epoch().count();
-  std::mt19937_64 random_generator(seed);
-
   for (int i = 0; i < number_of_tests; ++i) {
     std::cout << "Test number: " << i + 1 << std::endl;
     for (int j = 0; j < size; ++j) {
-      b_vector_ld[j][0] = matrix_utils::Random();
+      b_vector_ld[j][0] = matrix_utils::Random<long double>();
       b_vector_d[j][0] = b_vector_ld[j][0];
       b_vector_f[j][0] = b_vector_ld[j][0];
     }
