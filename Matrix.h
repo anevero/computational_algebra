@@ -40,6 +40,12 @@ using matrix_utils::ThreadPool;
 template<class T>
 class Matrix {
  public:
+  struct Eigenvector {
+    Matrix<T> vector;
+    std::complex<T> value;
+  };
+
+ public:
   explicit Matrix(std::vector<std::vector<T>> matrix,
                   T epsilon = std::numeric_limits<T>::epsilon());
   ~Matrix() = default;
@@ -241,23 +247,36 @@ class Matrix {
   // matrix with eigenvalues on the diagonal. Convergence condition: for every
   // item on the diagonal the difference between it and its version at the
   // previous iteration should be <= epsilon.
-  void RunQrAlgorithm(T epsilon = 0.00001);
+  void RunQrAlgorithm(T epsilon = 0.00001,
+                      int max_number_of_iterations = 1000000);
 
   // Returns a vector with all the eigenvalues of the matrix. These eigenvalues
   // are extracted from the Hessenberg matrix after applying QR algorithm to
   // it. If you haven't applied the algorithm, the results of these function
   // are undefined.
+  // Returned vectors are eigenvectors for symmetric matrices.
   // NOTE: it's recommended to use the same epsilon, as with RunQrAlgorithm()
   // method. Otherwise the results can be incorrect.
-  std::vector<std::complex<T>>
-  ExtractEigenvaluesFromHessenbergMatrix(T epsilon = 0.00001) const;
+  std::vector<Eigenvector>
+  GetEigenvectorsFromHessenbergMatrix(T epsilon = 0.00001) const;
 
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix. Allows to get the eigenvalue with
-// maximum module and the corresponding eigenvector.
+// maximum module and the corresponding eigenvector. Works only with real
+// numbers!
 
-  std::vector<std::tuple<Matrix<T>, T>>
-  GetPowerIterationResults(T epsilon = 0.00001) const;
+  // Return value can consist of 0, 1 or 2 eigenvectors and corresponding
+  // values.
+  // 0: the result hasn't converged (it's possible, that eigenvalues are too
+  // similar, or we just need even more iterations, or the eigenvalues are
+  // not real).
+  // 1: the matrix has an eigenvector with eigenvalue, which module is greater
+  // or equal than others.
+  // 2: the matrix has two eigenvectors with opposite eigenvalues, which
+  // modules are greater or equal than others, OR one of the returned vectors
+  // will be the vector with maximum module, the second will be another vector.
+  std::vector<Eigenvector> GetPowerIterationResults(
+      T epsilon = 0.00001, int max_number_of_iterations = 1500) const;
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
@@ -331,10 +350,9 @@ class Matrix {
   // have all the eigenvalues at the cells of the main diagonal.
   std::vector<std::vector<T>> hessenberg_matrix_{};
 
-  // Consists of (size - 1) entries, which were used at the last iteration of
-  // QR algorithm to get R matrix from QR decomposition of the Hessenberg
-  // matrix. Used to extract eigenvectors after finishing iterating.
-  std::vector<std::tuple<T, T, int, int>> hessenberg_rotation_matrices_{};
+  // Stored Q matrix, which is got after applying QR algorithm (this Q
+  // matrix will consist of eigenvectors).
+  std::vector<std::vector<T>> hessenberg_rotation_matrix_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1426,6 +1444,8 @@ void Matrix<T>::CountUpperHessenbergMatrix() {
           &hessenberg_matrix_, sin, cos, i, j + 1, size);
       MultiplyMatrixByRotation_Right(
           &hessenberg_matrix_, -sin, cos, i, j + 1, size);
+      MultiplyMatrixByRotation_Right(
+          &hessenberg_rotation_matrix_, -sin, cos, i, j + 1, size);
 
       hessenberg_matrix_[i][j] = 0;
     }
@@ -1439,7 +1459,7 @@ void Matrix<T>::RunQRAlgorithmIteration() {
   }
 
   int size = rows_;
-  hessenberg_rotation_matrices_.clear();
+  std::vector<std::tuple<T, T, int, int>> rotation_matrices_;
 
   for (int i = 1; i < size; ++i) {
     // Making matrix[i][i - 1] element equal to zero.
@@ -1459,34 +1479,51 @@ void Matrix<T>::RunQRAlgorithmIteration() {
 
     MultiplyMatrixByRotation_Left(&hessenberg_matrix_,
                                   sin, cos, i, i - 1, size);
-    hessenberg_rotation_matrices_.emplace_back(sin, cos, i, i - 1);
+    rotation_matrices_.emplace_back(sin, cos, i, i - 1);
 
     hessenberg_matrix_[i][i - 1] = 0;
   }
 
-  for (int i = 0; i < size - 1; ++i) {
+  int number_of_rotation_matrices = rotation_matrices_.size();
+  for (int i = 0; i < number_of_rotation_matrices; ++i) {
     MultiplyMatrixByRotation_Right(
         &hessenberg_matrix_,
-        -std::get<0>(hessenberg_rotation_matrices_[i]),
-        std::get<1>(hessenberg_rotation_matrices_[i]),
-        std::get<2>(hessenberg_rotation_matrices_[i]),
-        std::get<3>(hessenberg_rotation_matrices_[i]),
+        -std::get<0>(rotation_matrices_[i]),
+        std::get<1>(rotation_matrices_[i]),
+        std::get<2>(rotation_matrices_[i]),
+        std::get<3>(rotation_matrices_[i]),
+        size);
+
+    MultiplyMatrixByRotation_Right(
+        &hessenberg_rotation_matrix_,
+        -std::get<0>(rotation_matrices_[i]),
+        std::get<1>(rotation_matrices_[i]),
+        std::get<2>(rotation_matrices_[i]),
+        std::get<3>(rotation_matrices_[i]),
         size);
   }
 }
 
 template<class T>
-void Matrix<T>::RunQrAlgorithm(T epsilon) {
+void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
+  int size = rows_;
+
   if (hessenberg_matrix_.empty()) {
+    hessenberg_rotation_matrix_ =
+        std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
+    for (int i = 0; i < size; ++i) {
+      hessenberg_rotation_matrix_[i][i] = 1;
+    }
+
     CountUpperHessenbergMatrix();
   }
 
-  int size = rows_;
   std::vector<T> previous_values(size, 0);
   bool one_more_iteration = true;
   int number_of_iterations = 0;
 
-  while (one_more_iteration && number_of_iterations < 50000000) {
+  while (one_more_iteration &&
+      number_of_iterations < max_number_of_iterations) {
     RunQRAlgorithmIteration();
     ++number_of_iterations;
 
@@ -1502,14 +1539,23 @@ void Matrix<T>::RunQrAlgorithm(T epsilon) {
 }
 
 template<class T>
-std::vector<std::complex<T>>
-Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
+std::vector<typename Matrix<T>::Eigenvector>
+Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
   if (hessenberg_matrix_.empty()) {
     throw std::runtime_error("Hessenberg matrix hasn't been counted yet.");
   }
 
   int size = rows_;
-  std::vector<std::complex<T>> eigenvalues;
+  std::vector<Eigenvector> result;
+
+  auto get_ith_column = [&size](
+      const std::vector<std::vector<T>>& matrix, int i) -> Matrix<T> {
+    std::vector<std::vector<T>> result(size, std::vector<T>(1));
+    for (int j = 0; j < size; ++j) {
+      result[j][0] = matrix[j][i];
+    }
+    return Matrix(result);
+  };
 
   for (int i = 0; i < size; ++i) {
     if (i != size - 1 && std::abs(hessenberg_matrix_[i + 1][i]) > epsilon) {
@@ -1522,34 +1568,36 @@ Matrix<T>::ExtractEigenvaluesFromHessenbergMatrix(T epsilon) const {
       T imaginary_part =
           std::sqrt(4 * a * d - 4 * b * c - (a + d) * (a + d)) / 2;
 
-      eigenvalues.emplace_back(real_part, imaginary_part);
-      eigenvalues.emplace_back(real_part, -imaginary_part);
+      result.push_back(
+          {get_ith_column(hessenberg_rotation_matrix_, i),
+           {real_part, imaginary_part}});
+      result.push_back(
+          {get_ith_column(hessenberg_rotation_matrix_, i + 1),
+           {real_part, -imaginary_part}});
       ++i;
     } else {
-      eigenvalues.emplace_back(hessenberg_matrix_[i][i], 0);
+      result.push_back(
+          {get_ith_column(hessenberg_rotation_matrix_, i),
+           {hessenberg_matrix_[i][i], 0}});
     }
   }
 
-  return eigenvalues;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix.
 
 template<class T>
-std::vector<std::tuple<Matrix<T>, T>>
-Matrix<T>::GetPowerIterationResults(T epsilon) const {
+std::vector<typename Matrix<T>::Eigenvector>
+Matrix<T>::GetPowerIterationResults(
+    T epsilon, int max_number_of_iterations) const {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
   }
 
-  const int max_number_of_iterations = 1500;
-
   std::vector<std::vector<T>> u_vector(rows_, std::vector<T>(1, 0));
-  std::vector<std::vector<T>> zero_vector(rows_, std::vector<T>(1, 0));
   u_vector[0][0] = 1;
-
-  Matrix zero_matrix(zero_vector);
 
   auto vector_max_value = [](const Matrix<T>& vector) -> T {
     int size = vector.matrix_.size();
@@ -1562,9 +1610,8 @@ Matrix<T>::GetPowerIterationResults(T epsilon) const {
   };
 
   auto iterations =
-      [this, vector_max_value, &u_vector, &zero_matrix,
-          max_number_of_iterations, epsilon](bool sign) ->
-          std::tuple<Matrix<T>, T> {
+      [this, vector_max_value, &u_vector, max_number_of_iterations, epsilon](
+          bool sign) -> std::optional<Eigenvector> {
         T lambda = 0;
         Matrix u(u_vector);
         Matrix v(u_vector);
@@ -1588,41 +1635,41 @@ Matrix<T>::GetPowerIterationResults(T epsilon) const {
 
           ++number_of_iterations;
           if (number_of_iterations > max_number_of_iterations) {
-            return {zero_matrix, 0};
+            return std::nullopt;
           }
         }
 
-        return {v, lambda};
+        return Eigenvector{v, lambda};
       };
 
-  std::promise<std::tuple<Matrix<T>, T>> first_completed;
-  std::promise<std::tuple<Matrix<T>, T>> second_completed;
+  std::promise<std::optional<Eigenvector>> first_completed;
+  std::promise<std::optional<Eigenvector>> second_completed;
 
   auto first_future = first_completed.get_future();
   auto second_future = second_completed.get_future();
 
   std::thread([&iterations](
-      std::promise<std::tuple<Matrix<T>, T>>& first_completed) {
+      std::promise<std::optional<Eigenvector>>& first_completed) {
     auto result = iterations(false);
     first_completed.set_value(result);
   }, std::ref(first_completed)).join();
 
   std::thread([&iterations](
-      std::promise<std::tuple<Matrix<T>, T>>& second_completed) {
+      std::promise<std::optional<Eigenvector>>& second_completed) {
     auto result = iterations(true);
     second_completed.set_value(result);
   }, std::ref(second_completed)).join();
 
-  std::vector<std::tuple<Matrix<T>, T>> result = {};
+  std::vector<Eigenvector> result = {};
 
-  result.push_back(first_future.get());
-  if (std::get<0>(result.back()) == zero_matrix) {
-    result.pop_back();
+  auto first_future_result = first_future.get();
+  if (first_future_result.has_value()) {
+    result.push_back(std::move(first_future_result.value()));
   }
 
-  result.push_back(second_future.get());
-  if (std::get<0>(result.back()) == zero_matrix) {
-    result.pop_back();
+  auto second_future_result = second_future.get();
+  if (second_future_result.has_value()) {
+    result.push_back(std::move(second_future_result.value()));
   }
 
   return result;
