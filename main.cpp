@@ -59,10 +59,14 @@ int main() {
 //    std::cout << item.value << std::endl << item.vector << std::endl;
 //  }
 
-  Polynomial<int> p({1, 0, 1, 2});
-  Polynomial<int> q({-1, 0, 1});
+  Polynomial<double> p({-1, 0, 4879491, 0, 9, 5});
+  p.FindRoots();
 
-  std::cout << 5 * p * q;
+  for (auto item : p.GetRoots()) {
+    std::cout << std::fixed << std::setprecision(10) << item << std::endl;
+  }
+
+  std::cout << p << std::endl;
 
 
   return 0;
