@@ -1765,15 +1765,15 @@ void Matrix<T>::CountFrobeniusMatrix() {
         std::swap(frobenius_transition_matrix_[i][non_zero_column],
                   frobenius_transition_matrix_[i][current_column]);
       }
-      for (int i = 0; i < size; ++i) {
-        std::swap(frobenius_matrix_[non_zero_column][i],
-                  frobenius_matrix_[current_column][i]);
-      }
+      frobenius_matrix_[non_zero_column].swap(
+          frobenius_matrix_[current_column]);
     }
 
     auto divisor = frobenius_matrix_[current_row][current_column];
-    for (int i = 0; i <= current_row; ++i) {
+    for (int i = 0; i < current_row; ++i) {
       frobenius_matrix_[i][current_column] /= divisor;
+    }
+    for (int i = 0; i < size; ++i) {
       frobenius_transition_matrix_[i][current_column] /= divisor;
     }
     for (int i = 0; i < size; ++i) {
@@ -1784,15 +1784,16 @@ void Matrix<T>::CountFrobeniusMatrix() {
     for (int i = 0; i < size; ++i) {
       if (i == current_column) continue;
       auto multiplier = frobenius_matrix_[current_row][i];
-      for (int j = 0; j <= current_row; ++j) {
+      frobenius_matrix_[current_row][i] = 0;
+
+      for (int j = 0; j < current_row; ++j) {
         frobenius_matrix_[j][i] -=
             multiplier * frobenius_matrix_[j][current_column];
       }
-      for (int j = 0; j <= current_row; ++j) {
+      for (int j = 0; j < size; ++j) {
         frobenius_transition_matrix_[j][i] -=
             multiplier * frobenius_transition_matrix_[j][current_column];
       }
-      frobenius_matrix_[current_row][i] = 0;
       for (int j = 0; j < size; ++j) {
         frobenius_matrix_[current_column][j] +=
             multiplier * frobenius_matrix_[i][j];
