@@ -47,7 +47,7 @@ void Task7<T>::FirstMatrix() {
     std::cout << item.value << std::endl;
   }
 
-  std::cout << "Characteristic polynomial real roots (eigenvalues) and"
+  std::cout << "Characteristic polynomial real roots (eigenvalues) and "
                "corresponding eigenvectors:" << std::endl;
 
   for (const auto& item : a.GetEigenvectorsFromFrobeniusMatrix()) {
@@ -88,7 +88,7 @@ void Task7<T>::SecondMatrix() {
     std::cout << item.value << std::endl;
   }
 
-  std::cout << "Characteristic polynomial real roots (eigenvalues) and"
+  std::cout << "Characteristic polynomial real roots (eigenvalues) and "
                "corresponding eigenvectors:" << std::endl;
 
   for (const auto& item : a.GetEigenvectorsFromFrobeniusMatrix()) {

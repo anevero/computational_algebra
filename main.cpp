@@ -4,6 +4,8 @@
 #include "Tests/Tests.h"
 #include "Utils/DataOutput.h"
 
+#include "Tasks/Task8.h"
+
 using namespace matrix;
 using namespace polynomial;
 
@@ -72,6 +74,30 @@ int main() {
 //  for (auto& item : t) {
 //    std::cout << item.value << std::endl << item.vector << std::endl;
 //  }
+
+  std::cout << matrix_tasks::Task8<double>::TimeForMatrix(100, 0.00000000000001, 100000);
+
+//  auto first_result = matrix_tasks::Task8<double>::RandomInput(70, 0.0001);
+//  std::cout << "first" << std::endl;
+//  for (auto item : first_result) {
+//    std::cout << item << ", ";
+//  }
+//  std::cout << std::endl;
+//
+//  auto second_result = matrix_tasks::Task8<double>::RandomInput(70, 0.000001);
+//  std::cout << "second" << std::endl;
+//  for (auto item : second_result) {
+//    std::cout << item << ", ";
+//  }
+//  std::cout << std::endl;
+//
+//
+//  auto third_result = matrix_tasks::Task8<double>::RandomInput(70, 0.00000001);
+//  std::cout << "third" << std::endl;
+//  for (auto item : third_result) {
+//    std::cout << item << ", ";
+//  }
+//  std::cout << std::endl;
 
   return 0;
 }

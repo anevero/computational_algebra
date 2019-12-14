@@ -14,12 +14,12 @@ class Task8 {
  public:
   static void FirstMatrix();
   static void SecondMatrix();
-  static std::vector<int> RandomInput(int max_matrix_size = 100,
-                                      T epsilon = 0.0000000001,
-                                      int max_number_of_iterations = 100000);
-  static int TimeForMatrix(int matrix_size,
-                           T epsilon = 0.0000000001,
-                           int max_number_of_iterations = 100000);
+  [[nodiscard]] static std::vector<int> RandomInput(
+      int max_matrix_size = 100, T epsilon = 0.0000000001,
+      int max_number_of_iterations = 100000);
+  [[nodiscard]] static int TimeForMatrix(
+      int matrix_size, T epsilon = 0.0000000001,
+      int max_number_of_iterations = 100000);
 };
 
 template<class T>
@@ -44,11 +44,11 @@ void Task8<T>::FirstMatrix() {
   auto result = a.GetEigenvectorsFromHessenbergMatrix(0.000001);
 
   std::cout << "A matrix:" << std::endl << a << std::endl;
-  std::cout << "Eigenvalues and corresponding eigenvectors:" << std::endl;
+  std::cout << "Eigenvalues:" << std::endl;
   std::cout << "(" << result.size() << " items)" << std::endl;
 
   for (const auto& item : result) {
-    std::cout << item.value << std::endl << item.vector << std::endl;
+    std::cout << item.value << std::endl;
   }
 
   std::cout << std::endl;
@@ -76,11 +76,11 @@ void Task8<T>::SecondMatrix() {
   auto result = a.GetEigenvectorsFromHessenbergMatrix(0.000001);
 
   std::cout << "A matrix:" << std::endl << a << std::endl;
-  std::cout << "Eigenvalues and corresponding eigenvectors:" << std::endl;
+  std::cout << "Eigenvalues:" << std::endl;
   std::cout << "(" << result.size() << " items)" << std::endl;
 
   for (const auto& item : result) {
-    std::cout << item.value << std::endl << item.vector << std::endl;
+    std::cout << item.value << std::endl;
   }
 
   std::cout << std::endl;
@@ -126,26 +126,20 @@ requires std::is_floating_point_v<T>
 int Task8<T>::TimeForMatrix(int size, T epsilon, int max_number_of_iterations) {
   matrix_utils::SetRandomSeed(42);
 
-  int time = 0;
-  int number_of_tests = 3;
+  auto diagonal_matrix_vector = matrix_utils::RandomDiagonalMatrix<T>(size);
+  auto square_matrix_vector = matrix_utils::RandomSquareMatrix<T>(size);
 
-  for (int j = 0; j < number_of_tests; ++j) {
-    auto diagonal_matrix_vector = matrix_utils::RandomDiagonalMatrix<T>(size);
-    auto square_matrix_vector = matrix_utils::RandomSquareMatrix<T>(size);
+  auto square_matrix = Matrix(square_matrix_vector);
+  square_matrix.CountInverseMatrix();
+  auto matrix = square_matrix * Matrix(diagonal_matrix_vector)
+      * square_matrix.GetInverseMatrix();
 
-    auto square_matrix = Matrix(square_matrix_vector);
-    square_matrix.CountInverseMatrix();
-    auto matrix = square_matrix * Matrix(diagonal_matrix_vector)
-        * square_matrix.GetInverseMatrix();
+  auto t1 = std::chrono::high_resolution_clock::now();
+  matrix.RunQrAlgorithm(epsilon, max_number_of_iterations);
+  auto t2 = std::chrono::high_resolution_clock::now();
 
-    auto t1 = std::chrono::high_resolution_clock::now();
-    matrix.RunQrAlgorithm(epsilon, max_number_of_iterations);
-    auto t2 = std::chrono::high_resolution_clock::now();
-    time += std::chrono::duration_cast<std::chrono::microseconds>(
-        t2 - t1).count();
-  }
-
-  return time / number_of_tests;
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+      t2 - t1).count();
 }
 
 }  // namespace matrix::matrix_tasks
