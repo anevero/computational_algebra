@@ -35,9 +35,9 @@ std::vector<std::vector<T>> RandomSquareMatrix(int size) {
 }
 
 template<class T>
-requires std::is_floating_point_v<T> || std::is_integral_v<T>
+requires std::is_floating_point_v<T>
 inline bool Equal(T a, T b, T epsilon) {
-  return (std::abs(a - b) <= epsilon);
+  return (std::abs(a - b) < epsilon);
 }
 
 }  // namespace matrix::matrix_utils

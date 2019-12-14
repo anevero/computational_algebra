@@ -42,7 +42,10 @@ using polynomial::Polynomial;
 using matrix_utils::ThreadPool;
 using matrix_utils::Equal;
 
-template<class T> requires std::is_floating_point_v<T>
+template<class T>
+concept MatrixNumber = std::is_floating_point_v<T>;
+
+template<class T> requires MatrixNumber<T>
 class Matrix {
  public:
   struct Eigenvector {
@@ -53,11 +56,13 @@ class Matrix {
  public:
   explicit Matrix(std::vector<std::vector<T>> matrix,
                   T epsilon = std::numeric_limits<T>::epsilon());
+  // Default constructor initializes the matrix with [0].
+  Matrix();
   ~Matrix() = default;
 
 // ---------------------------------------------------------------------------
-// Comparison operators. Use predefined epsilons to compare floating point
-// values properly.
+// Comparison operators. Use predefined epsilons and Equal function from Utils
+// to compare small floating point values properly.
 
   bool operator==(const Matrix& other) const;
   bool operator!=(const Matrix& other) const;
@@ -78,6 +83,8 @@ class Matrix {
 
   [[nodiscard]] std::string ToString() const;
 
+  // Operator << is overloaded outside the class.
+
 // ---------------------------------------------------------------------------
 // Matrix norm functions. Matrix norm, induced by the vector max-norm, is used.
 
@@ -86,7 +93,7 @@ class Matrix {
   T CountAndGetNorm();
 
 // ---------------------------------------------------------------------------
-// Getters.
+// Matrix getters.
 
   int GetNumberOfRows() const;
   int GetNumberOfColumns() const;
@@ -120,6 +127,7 @@ class Matrix {
 // ---------------------------------------------------------------------------
 // TLU decomposition, solving systems of linear equations, counting the inverse
 // matrix for the ALMOST TRIANGULAR matrix (look at the task 1 conditions).
+// Almost triangulat matrix in this task is a lower Hessenberg matrix.
 // There're two ways for counting the inverse matrix. The both have pros and
 // cons, which are described in the report.
 // CountInverseMatrix_AlmostTriangular_TLU counts the inverse matrix using
@@ -127,8 +135,9 @@ class Matrix {
 // CountInverseMatrix_AlmostTriangular counts the inverse matrix making
 // the matrix lower-triangular and using this property.
 
-  // Checks if the matrix is satisfying Task 1 conditions (is almost triangular,
-  // i.e. has only one non-zero element to the right of the diagonal).
+  // Checks if the matrix is satisfying Task 1 conditions (is almost triangular
+  // or lower Hessenberg, i.e. has only one non-zero element to the right
+  // of the diagonal).
   bool IsAlmostTriangular() const;
 
   // Counts TLU decomposition of an almost triangular matrix. Uses this fact
@@ -228,96 +237,128 @@ class Matrix {
   void CountQrDecomposition();
 
 // ---------------------------------------------------------------------------
-// QR algorithm for any matrix (based on upper Hessenberg matrices). Allows to
-// get all the eigenvalues of the matrix.
+// QR algorithm for any matrix (based on upper Hessenberg matrices). If the
+// matrix is suitable for the algorithm, and it is able to converge properly,
+// it allows to get all the eigenvalues of the matrix. Otherwise eigenvalues,
+// returned by the algorithms below, can be incorrrect.
+// If the matrix is symmetric, the algorithm is also able to return
+// eigenvectors.
+// If the matrix is not symmetric, returned eigenvectors will be incorrect
+// (they will be orthogonal vectors, which are formed from the eigenvectors
+// by the Gram-Schmidt orthogonalization process).
 
   // Counts an upper Hessenberg (almost triangular) matrix, which is similar
-  // to this.
+  // to this. This matrix is saved in the interbal field of the class.
   // Time complexity is O(n^3).
   void CountUpperHessenbergMatrix();
 
  private:
   // Runs one iteration of QR algorithm. One iteration updates current
   // Hessenberg matrix (with O(n^2) time).
-  // If Hessenberg matrix hasn't been counted yet, runs CountUpperHessenberg
-  // Matrix() method.
   // Saves the information about rotation matrices in the corresponding private
-  // field of the class.
+  // field of the class. This info is necessary for restoring the eigenvectors
+  // later.
+  // This method assumes, that the Hessenberg form of the matrix has been
+  // already counted.
   void RunQRAlgorithmIteration();
 
  public:
   // Runs QR algorithm iterations, until the Hessenberg matrix converges to the
-  // matrix with eigenvalues on the diagonal. Convergence condition: for every
-  // item on the diagonal the difference between it and its version at the
-  // previous iteration should be <= epsilon.
+  // matrix with eigenvalues on the diagonal.
+  // Convergence condition: for every item on the diagonal and to the left of
+  // diagonal the difference between it and its version at the previous
+  // iteration should be <= epsilon.
+  // If the algorithm converges slowly (or even diverges), it will be stopped
+  // after some number of iterations. The results will be unpredictable, the
+  // information about this situation will be printed to std::cerr.
+  // If the Hessenberg form of the matrix hasn't been counted yet, runs
+  // the corresponding method.
   void RunQrAlgorithm(T epsilon = 0.00001,
                       int max_number_of_iterations = 1000000);
 
   // Returns a vector with all the eigenvalues of the matrix. These eigenvalues
   // are extracted from the Hessenberg matrix after applying QR algorithm to
-  // it. If you haven't applied the algorithm, the results of these function
-  // are undefined.
-  // Returned vectors are eigenvectors for symmetric matrices.
+  // it. This method assumes, that the Hessenberg form of the matrix has been
+  // already counted.
+  // Returned vectors are correct eigenvectors for the symmetric matrices.
+  // Otherwise they will be incorrect (they will be orthogonal vectors, which
+  // are formed from the eigenvectors by the Gram-Schmidt orthogonalization
+  // process).
   // NOTE: it's recommended to use the same epsilon, as with RunQrAlgorithm()
-  // method. Otherwise the results can be incorrect.
+  // method, or even smaller. Otherwise the results can be incorrect.
+  // Time complexity is O(n^2).
   std::vector<Eigenvector>
   GetEigenvectorsFromHessenbergMatrix(T epsilon = 0.00001) const;
 
 // ---------------------------------------------------------------------------
-// Danilevsky algorithm for any matrix (based on upper Frobenius matrices).
-// Allows to get all the eigenvalues and eigenvectors of the matrix.
+// Danilevsky algorithm implementation for any matrix (based on upper
+// Frobenius matrices). This algorithm is used to count the characteristic
+// polynomial of the matrix. Then at least real roots can be extracted from it
+// (look at Polynomial class methods), and these roots will be the eigenvalues.
+// If the Frobenius matrix, similar to this, isn't a block matrix, the
+// transition matrix S (F = S^{-1} A S) can be used to get the eigenvectors,
+// corresponding to the eigenvalues.
+// Note that due to restrictions of our methods to find the roots of the
+// polynomials, behaviour of the algorithms below can be unpredictable, if
+// the characteristic polynomial isn't suitable (for example, has a lot of
+// roots with degree > 1).
 
- private:
   // Counts the Frobenius (possibly block) matrix, which is similar to this.
-  // Time complexity is O(n^3).
-  void CountFrobeniusMatrixInternal(int size);
-
- public:
-  // Public interface for the function above.
+  // Time complexity is O(n^3). This matrix is stored in the internal field
+  // of the class.
   void CountFrobeniusMatrix();
 
   // Counts characteristic polynomial for the matrix, using its Frobenius form.
   // Saves it in the internal characteristic polynomial field.
   // If the Frobenius matrix hasn't been counted yet, runs CountFrobeniusMatrix
   // method.
+  // Time complexity: O(n).
   void CountCharacteristicPolynomial();
 
-  // Calls FindRoots() method for the characteristic polynomial. If the
-  // characteristic polynomial hasn't been counted yet, runs
-  // CountCharacteristicPolynomial method.
+  // Calls FindRoots() method for the characteristic polynomial. This method
+  // assumes that the characteristic polynomial has been already counted.
   void FindCharacteristicPolynomialRoots();
 
-  // Uses eigenvalues and Frobenius transition matrix to count eigenvectors,
-  // corresponding to real eigenvalues. You need to run methods to count them
-  // before this.
+  // This method uses eigenvalues (the roots of the characteristic polynomial)
+  // and Frobenius transition matrix to count the eigenvectors,
+  // corresponding to eigenvalues.
+  // The method assumes that the Frobenius form of the matrix and the roots
+  // of the characteristic polynomial have been already counted.
   // If some eigenvalues have degree greater than 1, behaviour is undefined:
   // the method can return several similar eigenvectors or just one eigenvector
   // for it.
-  // If Frobenius matrix is a block matrix, returned eigenvectors will be
+  // If the Frobenius matrix is a block matrix, returned eigenvectors will be
   // incorrect.
   std::vector<Eigenvector> GetEigenvectorsFromFrobeniusMatrix() const;
 
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix. Allows to get the eigenvalue with
 // maximum module and the corresponding eigenvector. Works only with real
-// numbers!
+// numbers.
 
-  // Return value can consist of 0, 1 or 2 eigenvectors and corresponding
+  // Runs Power Iterations method to count the eigencalue and the eigenvector.
+  // Returned vector can consist of 0, 1 or 2 eigenvectors and corresponding
   // values.
-  // 0: the result hasn't converged (it's possible, that eigenvalues are too
+  // 0: the method hasn't converged (it's possible that eigenvalues are too
   // similar, or we just need even more iterations, or the eigenvalues are
   // not real).
   // 1: the matrix has an eigenvector with eigenvalue, which module is greater
-  // or equal than others.
+  // or equal than others. This eigenvalue and eigenvector are returned.
   // 2: the matrix has two eigenvectors with opposite eigenvalues, which
   // modules are greater or equal than others, OR one of the returned vectors
-  // will be the vector with maximum module, the second will be another vector.
+  // will be the vector with maximum module, the second will be some another
+  // vector.
+  // Note that complex eigenvalues and corresponding eigenvectors aren't taken
+  // into account.
   std::vector<Eigenvector> GetPowerIterationResults(
       T epsilon = 0.00001, int max_number_of_iterations = 1500) const;
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU decomposition, LDL decomposition, QR
-// decomposition, counting the inverse matrix and the condition number.
+// decomposition, counting the inverse matrix and the condition number,
+// counting the Hessenberg and Frobenius forms of the matrix, etc.
+// All the methods below assume that necessary matrices have been already
+// counted. Otherwise the returned value is undefined.
 
   [[nodiscard]] Matrix<T> GetLMatrix_TLU() const;
   [[nodiscard]] Matrix<T> GetUMatrix_TLU() const;
@@ -338,11 +379,10 @@ class Matrix {
   // Returns an upper Hessenberg matrix, similar to this.
   [[nodiscard]] Matrix<T> GetUpperHessenbergMatrix() const;
 
-  // Returns the Frobenius matrix, similar to this.
+  // Returns the Frobenius matrix (possibly, a block matrix), similar to this.
   [[nodiscard]] Matrix<T> GetFrobeniusMatrix() const;
 
-  // Returns the characteristic polynomial, counted with help of Danilevsky
-  // method.
+  // Returns the characteristic polynomial of the matrix.
   [[nodiscard]] Polynomial<T> GetCharacteristicPolynomial() const;
 
   // Runs characteristic_polynomial.GetRoots() method (so this method can
@@ -396,27 +436,28 @@ class Matrix {
 
   // Upper Hessenberg matrix, similar to 'this', is stored here. This variable
   // is updated every iteration of the QR algorithm, and finally it will
-  // have all the eigenvalues at the cells of the main diagonal.
+  // have all the eigenvalues at the cells of the main diagonal (it the method
+  // converges for the given matrix).
   std::vector<std::vector<T>> hessenberg_matrix_{};
 
   // Stored Q matrix, which is got after applying QR algorithm (this Q
-  // matrix will consist of eigenvectors).
+  // matrix will consist of eigenvectors in case of the symmetric matrix).
   std::vector<std::vector<T>> hessenberg_rotation_matrix_{};
 
 // ---------------------------------------------------------------------------
 // Variables connected with Danilevsky algorithm.
 
-  // Frobenius (it's possible, that block) matrix, which is similar to this
+  // Frobenius (it's possible, a block) matrix, which is similar to this
   // matrix. Counting this matrix is a part of the Danilevsky algorithm for
   // counting the characteristic polynomial of the matrix.
   std::vector<std::vector<T>> frobenius_matrix_;
 
-  // If Frobenius matrix is found as F = S^{-1} A S, then this matrix is S.
+  // If the Frobenius matrix is found as F = S^{-1} A S, then this matrix is S.
   // It's necessary for restoring eigenvectors after applying Danilevsky
   // algorithm and counting eigenvalues.
   std::vector<std::vector<T>> frobenius_transition_matrix_;
 
-  Polynomial<T> characteristic_polynomial_{};
+  Polynomial<T> characteristic_polynomial_;
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -426,7 +467,7 @@ class Matrix {
 };
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
     : matrix_(std::move(matrix)),
       epsilon_(epsilon) {
@@ -440,11 +481,16 @@ Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
   columns_ = matrix_[0].size();
 }
 
+template<class T>
+requires MatrixNumber<T>
+Matrix<T>::Matrix() : Matrix({{0}}) {
+}
+
 // ---------------------------------------------------------------------------
 // Comparison operators.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 bool Matrix<T>::operator==(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) return false;
   auto max_epsilon = std::max(epsilon_, other.epsilon_);
@@ -459,7 +505,7 @@ bool Matrix<T>::operator==(const Matrix& other) const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 bool Matrix<T>::operator!=(const Matrix& other) const {
   return !operator==(other);
 }
@@ -468,7 +514,7 @@ bool Matrix<T>::operator!=(const Matrix& other) const {
 // Arithmetic operators.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
@@ -485,7 +531,7 @@ Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
@@ -502,7 +548,7 @@ Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
   if (columns_ != other.rows_) {
     throw std::runtime_error(
@@ -543,7 +589,7 @@ Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::operator*(T number) const {
   Matrix<T> result(matrix_, epsilon_);
   for (int i = 0; i < rows_; ++i) {
@@ -555,7 +601,7 @@ Matrix<T> Matrix<T>::operator*(T number) const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::operator/(T number) const {
   Matrix<T> result(matrix_, epsilon_);
   for (int i = 0; i < rows_; ++i) {
@@ -575,7 +621,7 @@ Matrix<U> operator*(U number, const Matrix<U>& matrix) {
 // Printing the matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::string Matrix<T>::ToString() const {
   std::stringstream stream;
   stream << '[';
@@ -608,7 +654,7 @@ std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
 // Matrix norm functions.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountNorm() {
   norm_ = 0;
   for (int i = 0; i < rows_; ++i) {
@@ -621,13 +667,13 @@ void Matrix<T>::CountNorm() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::optional<T> Matrix<T>::GetNorm() const {
   return norm_;
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 T Matrix<T>::CountAndGetNorm() {
   if (!norm_.has_value()) {
     CountNorm();
@@ -639,25 +685,25 @@ T Matrix<T>::CountAndGetNorm() {
 // Getters.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 int Matrix<T>::GetNumberOfRows() const {
   return rows_;
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 int Matrix<T>::GetNumberOfColumns() const {
   return columns_;
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 T Matrix<T>::GetEpsilon() const {
   return epsilon_;
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::vector<std::vector<T>> Matrix<T>::GetMatrixAsVector() const {
   return matrix_;
 }
@@ -667,7 +713,7 @@ std::vector<std::vector<T>> Matrix<T>::GetMatrixAsVector() const {
 // matrix and the condition number for ANY matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountTluDecomposition() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -732,7 +778,7 @@ void Matrix<T>::CountTluDecomposition() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -774,7 +820,7 @@ Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountInverseMatrix() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition();
@@ -825,7 +871,7 @@ void Matrix<T>::CountInverseMatrix() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountConditionNumber() {
   if (inverse_matrix_.empty()) {
     CountInverseMatrix();
@@ -853,7 +899,7 @@ void Matrix<T>::CountConditionNumber() {
 // matrix for the ALMOST TRIANGULAR matrix (look at the task 1 conditions).
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 bool Matrix<T>::IsAlmostTriangular() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
@@ -865,7 +911,7 @@ bool Matrix<T>::IsAlmostTriangular() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -912,7 +958,7 @@ void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::SolveSystem_AlmostTriangular(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -948,7 +994,7 @@ Matrix<T> Matrix<T>::SolveSystem_AlmostTriangular(Matrix<T> b) {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition_AlmostTriangular();
@@ -1000,7 +1046,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition_AlmostTriangular();
@@ -1021,7 +1067,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
   int size = rows_;
   auto a_matrix = matrix_;
@@ -1134,7 +1180,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_SingleThread() {
   int size = rows_;
   auto a_matrix = matrix_;
@@ -1188,7 +1234,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_SingleThread() {
 // matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 bool Matrix<T>::IsSymmetric() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
@@ -1200,7 +1246,7 @@ bool Matrix<T>::IsSymmetric() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetTranspose() const {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1217,7 +1263,7 @@ Matrix<T> Matrix<T>::GetTranspose() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountLdlDecomposition_Symmetric() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1272,7 +1318,7 @@ void Matrix<T>::CountLdlDecomposition_Symmetric() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -1315,13 +1361,13 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
 // Solving systems of linear equations for the TRIDIAGONAL matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 bool Matrix<T>::IsTridiagonal() const {
   return (columns_ == 3);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
   std::vector<std::vector<T>> result(rows_, std::vector<T>(rows_, 0));
   for (int i = 0; i < rows_; ++i) {
@@ -1337,7 +1383,7 @@ Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
   if (rows_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -1397,11 +1443,10 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 // QR decomposition for any matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::MultiplyMatrixByRotation_Left(
     std::vector<std::vector<T>>* matrix, T sin, T cos,
     int i, int j, int size) const {
-
   std::vector<T> new_j_row = (*matrix)[j];
   std::vector<T> new_i_row = (*matrix)[j];
 
@@ -1423,7 +1468,7 @@ void Matrix<T>::MultiplyMatrixByRotation_Left(
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::MultiplyMatrixByRotation_Right(
     std::vector<std::vector<T>>* matrix, T sin, T cos,
     int i, int j, int size) const {
@@ -1446,7 +1491,7 @@ void Matrix<T>::MultiplyMatrixByRotation_Right(
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountQrDecomposition() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1492,7 +1537,7 @@ void Matrix<T>::CountQrDecomposition() {
 // QR algorithm for any matrix (based on upper Hessenberg matrices).
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountUpperHessenbergMatrix() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1537,12 +1582,8 @@ void Matrix<T>::CountUpperHessenbergMatrix() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::RunQRAlgorithmIteration() {
-  if (hessenberg_matrix_.empty()) {
-    CountUpperHessenbergMatrix();
-  }
-
   int size = rows_;
   std::vector<std::tuple<T, T, int, int>> rotation_matrices_;
 
@@ -1590,7 +1631,7 @@ void Matrix<T>::RunQRAlgorithmIteration() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
   int size = rows_;
 
@@ -1606,11 +1647,12 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
 
   std::vector<T> previous_diagonal_values(size, 0);
   std::vector<T> previous_left_diagonal_values(size - 1, 0);
+
   bool one_more_iteration = true;
   int number_of_iterations = 0;
 
-  while (one_more_iteration &&
-      number_of_iterations < max_number_of_iterations) {
+  while (one_more_iteration
+      && number_of_iterations < max_number_of_iterations) {
     RunQRAlgorithmIteration();
     ++number_of_iterations;
 
@@ -1632,16 +1674,17 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
       previous_left_diagonal_values[i] = hessenberg_matrix_[i][i - 1];
     }
   }
+
+  if (number_of_iterations == max_number_of_iterations) {
+    std::cerr << "QR algorithm: stopped after the maximum number of iterations"
+                 " reached." << std::endl;
+  }
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::vector<typename Matrix<T>::Eigenvector>
 Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
-  if (hessenberg_matrix_.empty()) {
-    throw std::runtime_error("Hessenberg matrix hasn't been counted yet.");
-  }
-
   int size = rows_;
   std::vector<Eigenvector> result;
 
@@ -1686,8 +1729,21 @@ Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
 // Danilevsky algorithm for any matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
-void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
+requires MatrixNumber<T>
+void Matrix<T>::CountFrobeniusMatrix() {
+  if (rows_ != columns_) {
+    throw std::runtime_error("Matrix is not square.");
+  }
+
+  int size = rows_;
+  frobenius_matrix_ = matrix_;
+
+  frobenius_transition_matrix_ =
+      std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
+  for (int i = 0; i < size; ++i) {
+    frobenius_transition_matrix_[i][i] = 1;
+  }
+
   int current_row = size - 1;
   int current_column = size - 2;
 
@@ -1698,7 +1754,9 @@ void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
       --non_zero_column;
     }
     if (non_zero_column == -1) {
-      return CountFrobeniusMatrixInternal(current_row);
+      --current_row;
+      current_column = current_row - 1;
+      continue;
     }
     if (non_zero_column != current_column) {
       for (int i = 0; i < size; ++i) {
@@ -1747,25 +1805,7 @@ void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
-void Matrix<T>::CountFrobeniusMatrix() {
-  if (rows_ != columns_) {
-    throw std::runtime_error("Matrix is not square.");
-  }
-  int size = rows_;
-  frobenius_matrix_ = matrix_;
-
-  frobenius_transition_matrix_ =
-      std::vector<std::vector<T>>(size, std::vector<T>(size, 0));
-  for (int i = 0; i < size; ++i) {
-    frobenius_transition_matrix_[i][i] = 1;
-  }
-
-  return CountFrobeniusMatrixInternal(size);
-}
-
-template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::CountCharacteristicPolynomial() {
   if (frobenius_matrix_.empty()) {
     CountFrobeniusMatrix();
@@ -1801,22 +1841,15 @@ void Matrix<T>::CountCharacteristicPolynomial() {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 void Matrix<T>::FindCharacteristicPolynomialRoots() {
-  if (characteristic_polynomial_ == Polynomial({0}, epsilon_)) {
-    CountCharacteristicPolynomial();
-  }
   characteristic_polynomial_.FindRoots();
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::vector<typename Matrix<T>::Eigenvector>
 Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
-  if (frobenius_matrix_.empty()) {
-    throw std::runtime_error("Frobenius matrix hasn't been counted yet.");
-  }
-
   std::vector<Eigenvector> result;
   int size = rows_;
   auto transition_matrix = Matrix(frobenius_transition_matrix_);
@@ -1839,10 +1872,10 @@ Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
 // Power iteration algorithm for any matrix.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::vector<typename Matrix<T>::Eigenvector>
-Matrix<T>::GetPowerIterationResults(
-    T epsilon, int max_number_of_iterations) const {
+Matrix<T>::GetPowerIterationResults(T epsilon,
+                                    int max_number_of_iterations) const {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
   }
@@ -1861,7 +1894,7 @@ Matrix<T>::GetPowerIterationResults(
   };
 
   auto iterations =
-      [this, vector_max_value, &u_vector, max_number_of_iterations, epsilon](
+      [this, &u_vector, vector_max_value, max_number_of_iterations, epsilon](
           bool sign) -> std::optional<Eigenvector> {
         T lambda = 0;
         Matrix u(u_vector);
@@ -1928,22 +1961,22 @@ Matrix<T>::GetPowerIterationResults(
 
 // ---------------------------------------------------------------------------
 // Getters for the results of TLU, LDL, QR decompositions, counting the
-// inverse matrix and the condition number.
+// inverse matrix and the condition number, etc.
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetLMatrix_TLU() const {
   return Matrix(L_matrix_TLU_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetUMatrix_TLU() const {
   return Matrix(U_matrix_TLU_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetTMatrix_TLU() const {
   int size = rows_;
   std::vector<std::vector<T>> t_matrix(size, std::vector<T>(size, 0));
@@ -1954,7 +1987,7 @@ Matrix<T> Matrix<T>::GetTMatrix_TLU() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetTInverseMatrix_TLU() const {
   int size = rows_;
   std::vector<std::vector<T>> d_inverse_matrix(size, std::vector<T>(size, 0));
@@ -1965,13 +1998,13 @@ Matrix<T> Matrix<T>::GetTInverseMatrix_TLU() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetLTMatrix_LDL() const {
   return Matrix(LT_matrix_LDL_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetDMatrix_LDL() const {
   int size = rows_;
   std::vector<std::vector<T>> d_matrix(size, std::vector<T>(size, 0));
@@ -1982,49 +2015,49 @@ Matrix<T> Matrix<T>::GetDMatrix_LDL() const {
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetQMatrix_QR() const {
   return Matrix(Q_matrix_QR_, epsilon_).GetTranspose();
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetRMatrix_QR() const {
   return Matrix(R_matrix_QR_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetUpperHessenbergMatrix() const {
   return Matrix(hessenberg_matrix_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetFrobeniusMatrix() const {
   return Matrix(frobenius_matrix_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Polynomial<T> Matrix<T>::GetCharacteristicPolynomial() const {
   return characteristic_polynomial_;
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::vector<T> Matrix<T>::GetCharacteristicPolynomialRealRoots() const {
   return characteristic_polynomial_.GetRoots();
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 Matrix<T> Matrix<T>::GetInverseMatrix() const {
   return Matrix(inverse_matrix_, epsilon_);
 }
 
 template<class T>
-requires std::is_floating_point_v<T>
+requires MatrixNumber<T>
 std::optional<T> Matrix<T>::GetConditionNumber() const {
   return condition_number_;
 }

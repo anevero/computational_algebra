@@ -39,8 +39,8 @@ class Polynomial {
   ~Polynomial() = default;
 
 // ---------------------------------------------------------------------------
-// Comparison operators. Use predefined epsilons to compare floating point
-// values properly.
+// Comparison operators. Use predefined epsilons and Equal function from Utils
+// to compare small floating point values properly.
 
   bool operator==(const Polynomial& other) const;
   bool operator!=(const Polynomial& other) const;
@@ -70,7 +70,8 @@ class Polynomial {
 
  private:
   // This private function runs the bisection method for the passed interval
-  // and returns the new interval (which is smaller and fits in epsilon).
+  // and returns the new interval (which is smaller, and which length is less
+  // or equal than epsilon).
   std::tuple<T, T> RunBisectionAlgorithm(T left_border, T right_border,
                                          T epsilon) const;
 
