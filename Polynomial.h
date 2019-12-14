@@ -10,6 +10,13 @@
 // implemented. Their descriptions (with time asymptotics estimate) are
 // located below.
 
+#include <algorithm>
+#include <limits>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
 #include "Utils/Utils.h"
 
 namespace polynomial {
@@ -26,6 +33,9 @@ class Polynomial {
   // a_0 x^{n} + a_1 x^{n - 1} + ... + a_{n - 1} x + a_n.
   explicit Polynomial(std::vector<T> coefficients,
                       T epsilon = std::numeric_limits<T>::epsilon());
+  // Default constructor initializes polynomial with 0 value and minimum
+  // possible epsilon.
+  Polynomial();
   ~Polynomial() = default;
 
 // ---------------------------------------------------------------------------
@@ -100,6 +110,11 @@ template<class T>
 requires PolynomialCoefficient<T>
 Polynomial<T>::Polynomial(std::vector<T> coefficients, T epsilon)
     : coefficients_(std::move(coefficients)), epsilon_(epsilon) {
+}
+
+template<class T>
+requires PolynomialCoefficient<T>
+Polynomial<T>::Polynomial() : Polynomial({0}) {
 }
 
 // ---------------------------------------------------------------------------
@@ -269,8 +284,8 @@ std::optional<T> Polynomial<T>::RunNewtonAlgorithm(
   T previous_point;
   if (GetValue(left_border) * second_derivative.GetValue(left_border) > T()) {
     previous_point = left_border;
-  } else if (
-      GetValue(right_border) * second_derivative.GetValue(right_border) > T()) {
+  } else if (GetValue(right_border) * second_derivative.GetValue(right_border)
+      > T()) {
     previous_point = right_border;
   } else {
     return std::nullopt;
@@ -374,8 +389,10 @@ std::string Polynomial<T>::ToString() const {
       result += " ";
       result += (coefficients_[i] > 0) ? "+" : "-";
       result += " ";
+      result += std::to_string(std::abs(coefficients_[i]));
+    } else {
+      result += std::to_string(coefficients_[i]);
     }
-    result += std::to_string(std::abs(coefficients_[i]));
     if (i == 0) continue;
     result += "x";
     if (i == 1) continue;

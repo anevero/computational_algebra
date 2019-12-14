@@ -31,9 +31,21 @@ int main() {
 //                                        {2, 3, -1},
 //                                        {4, -1, 1}};
 
-//  Matrix m(v);
-//  m.CountFrobeniusMatrix();
-//  std::cout << m.GetFrobeniusMatrix() << std::endl;
+  std::vector<std::vector<double>> v = {{1, 5, 10, 15},
+                                        {0, 54, 45, 32},
+                                        {0, 42, 42, 1},
+                                        {0, 0, 0, 4}};
+
+  Matrix m(v);
+  m.CountFrobeniusMatrix();
+  m.CountCharacteristicPolynomial();
+  m.FindCharacteristicPolynomialRoots();
+  std::cout << m.GetFrobeniusMatrix() << std::endl;
+  std::cout << m.GetCharacteristicPolynomial() << std::endl;
+
+  for (auto item : m.GetCharacteristicPolynomialRealRoots()) {
+    std::cout << item << std::endl;
+  }
 
 //  std::fstream in("../input_files/task6_input2");
 //  double a;
@@ -58,16 +70,6 @@ int main() {
 //  for (auto& item : t) {
 //    std::cout << item.value << std::endl << item.vector << std::endl;
 //  }
-
-  Polynomial<double> p({-1, 0, 4879491, 0, 9, 5});
-  p.FindRoots();
-
-  for (auto item : p.GetRoots()) {
-    std::cout << std::fixed << std::setprecision(10) << item << std::endl;
-  }
-
-  std::cout << p << std::endl;
-
 
   return 0;
 }

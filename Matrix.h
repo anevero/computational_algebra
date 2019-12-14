@@ -275,6 +275,13 @@ class Matrix {
   // Public interface for the function above.
   void CountFrobeniusMatrix();
 
+  // Counts characteristic polynomial for the matrix, using its Frobenius form.
+  // Saves it in the internal characteristic polynomial field.
+  void CountCharacteristicPolynomial();
+
+  // Calls CountRoots() method for the characteristic polynomial.
+  void FindCharacteristicPolynomialRoots();
+
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix. Allows to get the eigenvalue with
 // maximum module and the corresponding eigenvector. Works only with real
@@ -318,6 +325,15 @@ class Matrix {
 
   // Returns the Frobenius matrix, similar to this.
   [[nodiscard]] Matrix<T> GetFrobeniusMatrix() const;
+
+  // Returns the characteristic polynomial, counted with help of Danilevsky
+  // method.
+  [[nodiscard]] Polynomial<T> GetCharacteristicPolynomial() const;
+
+  // Runs characteristic_polynomial.GetRoots() method (so this method can
+  // actually be replaced by GetCharacteristicPolynomial() and manual
+  // searching for the roots).
+  [[nodiscard]] std::vector<T> GetCharacteristicPolynomialRealRoots() const;
 
   [[nodiscard]] Matrix<T> GetInverseMatrix() const;
   std::optional<T> GetConditionNumber() const;
@@ -384,6 +400,8 @@ class Matrix {
   // It's necessary for restoring eigenvectors after applying Danilevsky
   // algorithm and counting eigenvalues.
   std::vector<std::vector<T>> frobenius_transition_matrix_;
+
+  Polynomial<T> characteristic_polynomial_{};
 
 // ---------------------------------------------------------------------------
 // Results of applying different algorithms.
@@ -1721,6 +1739,51 @@ void Matrix<T>::CountFrobeniusMatrix() {
   return CountFrobeniusMatrixInternal(size);
 }
 
+template<class T>
+requires std::is_floating_point_v<T>
+void Matrix<T>::CountCharacteristicPolynomial() {
+  if (frobenius_matrix_.empty()) {
+    CountFrobeniusMatrix();
+  }
+
+  characteristic_polynomial_ = Polynomial({1}, epsilon_);
+  int size = rows_;
+
+  int current_row = size - 1;
+  int current_column = current_row - 1;
+
+  while (current_row >= 0) {
+    if (current_column == -1 ||
+        Equal(frobenius_matrix_[current_row][current_column], T(), epsilon_)) {
+      std::vector<T> current_coefficients;
+      for (int i = current_column + 1; i < size; ++i) {
+        current_coefficients.push_back(-frobenius_matrix_[current_row][i]);
+      }
+      std::reverse(current_coefficients.begin(), current_coefficients.end());
+      current_coefficients.push_back(1);
+      characteristic_polynomial_ =
+          characteristic_polynomial_ * Polynomial(current_coefficients);
+      if ((size - current_column - 1) % 2 == 1) {
+        characteristic_polynomial_ =
+            static_cast<T>(-1) * characteristic_polynomial_;
+      }
+
+      size = current_row;
+    }
+    --current_row;
+    --current_column;
+  }
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+void Matrix<T>::FindCharacteristicPolynomialRoots() {
+  if (characteristic_polynomial_ == Polynomial({0}, epsilon_)) {
+    CountCharacteristicPolynomial();
+  }
+  characteristic_polynomial_.FindRoots();
+}
+
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix.
 
@@ -1889,6 +1952,18 @@ template<class T>
 requires std::is_floating_point_v<T>
 Matrix<T> Matrix<T>::GetFrobeniusMatrix() const {
   return Matrix(frobenius_matrix_, epsilon_);
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+Polynomial<T> Matrix<T>::GetCharacteristicPolynomial() const {
+  return characteristic_polynomial_;
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+std::vector<T> Matrix<T>::GetCharacteristicPolynomialRealRoots() const {
+  return characteristic_polynomial_.GetRoots();
 }
 
 template<class T>
