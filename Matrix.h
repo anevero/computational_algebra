@@ -6,9 +6,10 @@
 // A constructor from the two-dimensional vector is provided, as well as
 // comparison operators (equal and not equal), sum, difference and product
 // operators. << operator is overloaded for printing matrices.
-// Methods for counting TLU / LDL decomposition, solving systems of linear
-// equations, counting an inverse matrix and counting a condition number are
-// implemented. Their descriptions (with time asymptotics estimate) are
+// Methods for counting TLU / LDL / QR decomposition, solving systems of linear
+// equations, counting an inverse matrix and counting a condition number,
+// searching for eigenvalues and eigenvectors are implemented.
+// Their descriptions (often with time asymptotics estimate) are
 // located below.
 
 #include <algorithm>
@@ -277,10 +278,24 @@ class Matrix {
 
   // Counts characteristic polynomial for the matrix, using its Frobenius form.
   // Saves it in the internal characteristic polynomial field.
+  // If the Frobenius matrix hasn't been counted yet, runs CountFrobeniusMatrix
+  // method.
   void CountCharacteristicPolynomial();
 
-  // Calls CountRoots() method for the characteristic polynomial.
+  // Calls FindRoots() method for the characteristic polynomial. If the
+  // characteristic polynomial hasn't been counted yet, runs
+  // CountCharacteristicPolynomial method.
   void FindCharacteristicPolynomialRoots();
+
+  // Uses eigenvalues and Frobenius transition matrix to count eigenvectors,
+  // corresponding to real eigenvalues. You need to run methods to count them
+  // before this.
+  // If some eigenvalues have degree greater than 1, behaviour is undefined:
+  // the method can return several similar eigenvectors or just one eigenvector
+  // for it.
+  // If Frobenius matrix is a block matrix, returned eigenvectors will be
+  // incorrect.
+  std::vector<Eigenvector> GetEigenvectorsFromFrobeniusMatrix() const;
 
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix. Allows to get the eigenvalue with
@@ -1589,7 +1604,8 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
     CountUpperHessenbergMatrix();
   }
 
-  std::vector<T> previous_values(size, 0);
+  std::vector<T> previous_diagonal_values(size, 0);
+  std::vector<T> previous_left_diagonal_values(size - 1, 0);
   bool one_more_iteration = true;
   int number_of_iterations = 0;
 
@@ -1601,10 +1617,19 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
     one_more_iteration = false;
     for (int i = 0; i < size; ++i) {
       if (!one_more_iteration &&
-          std::abs(previous_values[i] - hessenberg_matrix_[i][i]) > epsilon) {
+          std::abs(previous_diagonal_values[i] - hessenberg_matrix_[i][i])
+              > epsilon) {
         one_more_iteration = true;
       }
-      previous_values[i] = hessenberg_matrix_[i][i];
+      previous_diagonal_values[i] = hessenberg_matrix_[i][i];
+    }
+    for (int i = 1; i < size; ++i) {
+      if (!one_more_iteration && std::abs(
+          previous_left_diagonal_values[i] - hessenberg_matrix_[i][i - 1])
+          > epsilon) {
+        one_more_iteration = true;
+      }
+      previous_left_diagonal_values[i] = hessenberg_matrix_[i][i - 1];
     }
   }
 }
@@ -1689,7 +1714,7 @@ void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
     }
 
     auto divisor = frobenius_matrix_[current_row][current_column];
-    for (int i = 0; i < current_row; ++i) {
+    for (int i = 0; i <= current_row; ++i) {
       frobenius_matrix_[i][current_column] /= divisor;
       frobenius_transition_matrix_[i][current_column] /= divisor;
     }
@@ -1701,11 +1726,11 @@ void Matrix<T>::CountFrobeniusMatrixInternal(int size) {
     for (int i = 0; i < size; ++i) {
       if (i == current_column) continue;
       auto multiplier = frobenius_matrix_[current_row][i];
-      for (int j = 0; j < current_row; ++j) {
+      for (int j = 0; j <= current_row; ++j) {
         frobenius_matrix_[j][i] -=
             multiplier * frobenius_matrix_[j][current_column];
       }
-      for (int j = 0; j < current_row; ++j) {
+      for (int j = 0; j <= current_row; ++j) {
         frobenius_transition_matrix_[j][i] -=
             multiplier * frobenius_transition_matrix_[j][current_column];
       }
@@ -1782,6 +1807,32 @@ void Matrix<T>::FindCharacteristicPolynomialRoots() {
     CountCharacteristicPolynomial();
   }
   characteristic_polynomial_.FindRoots();
+}
+
+template<class T>
+requires std::is_floating_point_v<T>
+std::vector<typename Matrix<T>::Eigenvector>
+Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
+  if (frobenius_matrix_.empty()) {
+    throw std::runtime_error("Frobenius matrix hasn't been counted yet.");
+  }
+
+  std::vector<Eigenvector> result;
+  int size = rows_;
+  auto transition_matrix = Matrix(frobenius_transition_matrix_);
+
+  for (auto eigenvalue : characteristic_polynomial_.GetRoots()) {
+    std::vector<std::vector<T>> eigenvector(size, std::vector<T>(1));
+    T current_eigenvalue_degree = 1;
+    for (int i = size - 1; i >= 0; --i) {
+      eigenvector[i][0] = current_eigenvalue_degree;
+      current_eigenvalue_degree *= eigenvalue;
+    }
+    result.push_back({transition_matrix * Matrix(eigenvector),
+                      eigenvalue});
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
