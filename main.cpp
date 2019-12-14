@@ -38,25 +38,25 @@ int main() {
 //                                        {-26, -21, 10},
 //                                        {8, 8, -5}};
 
-  std::fstream in("../input_files/task6_input1");
-  double a;
-  in >> a;
-  std::vector<std::vector<double>> v(a, std::vector<double>(a));
-  for (int i = 0; i < a; ++i) {
-    for (int j = 0; j < a; ++j) {
-      in >> v[i][j];
-    }
-  }
-
-  Matrix m(v);
-  m.CountFrobeniusMatrix();
-  m.CountCharacteristicPolynomial();
-  m.FindCharacteristicPolynomialRoots();
-  std::cout << m.GetFrobeniusMatrix() << std::endl;
-
-  for (const auto& item : m.GetEigenvectorsFromFrobeniusMatrix()) {
-    std::cout << item.value << std::endl << item.vector << std::endl;
-  }
+//  std::fstream in("../input_files/task6_input1");
+//  double a;
+//  in >> a;
+//  std::vector<std::vector<double>> v(a, std::vector<double>(a));
+//  for (int i = 0; i < a; ++i) {
+//    for (int j = 0; j < a; ++j) {
+//      in >> v[i][j];
+//    }
+//  }
+//
+//  Matrix m(v);
+//  m.CountFrobeniusMatrix();
+//  m.CountCharacteristicPolynomial();
+//  m.FindCharacteristicPolynomialRoots();
+//  std::cout << m.GetFrobeniusMatrix() << std::endl;
+//
+//  for (const auto& item : m.GetEigenvectorsFromFrobeniusMatrix()) {
+//    std::cout << item.value << std::endl << item.vector << std::endl;
+//  }
 
 //  Matrix m(v);
 //  m.RunQrAlgorithm(0.00000001);

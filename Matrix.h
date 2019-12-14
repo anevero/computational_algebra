@@ -248,7 +248,7 @@ class Matrix {
 // by the Gram-Schmidt orthogonalization process).
 
   // Counts an upper Hessenberg (almost triangular) matrix, which is similar
-  // to this. This matrix is saved in the interbal field of the class.
+  // to this. This matrix is saved in the internal field of the class.
   // Time complexity is O(n^3).
   void CountUpperHessenbergMatrix();
 
@@ -1667,11 +1667,11 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
     }
     for (int i = 1; i < size; ++i) {
       if (!one_more_iteration && std::abs(
-          previous_left_diagonal_values[i] - hessenberg_matrix_[i][i - 1])
+          previous_left_diagonal_values[i - 1] - hessenberg_matrix_[i][i - 1])
           > epsilon) {
         one_more_iteration = true;
       }
-      previous_left_diagonal_values[i] = hessenberg_matrix_[i][i - 1];
+      previous_left_diagonal_values[i - 1] = hessenberg_matrix_[i][i - 1];
     }
   }
 
@@ -1698,7 +1698,7 @@ Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
   };
 
   for (int i = 0; i < size; ++i) {
-    if (i != size - 1 && std::abs(hessenberg_matrix_[i + 1][i]) > epsilon) {
+    if (i < size - 1 && std::abs(hessenberg_matrix_[i + 1][i]) > epsilon) {
       T a = hessenberg_matrix_[i][i];
       T b = hessenberg_matrix_[i][i + 1];
       T c = hessenberg_matrix_[i + 1][i];

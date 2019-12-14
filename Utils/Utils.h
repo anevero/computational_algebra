@@ -24,12 +24,21 @@ T Random(int modulo = 5000, bool force_positive = false) {
 template<class T>
 requires std::is_floating_point_v<T> || std::is_integral_v<T>
 std::vector<std::vector<T>> RandomSquareMatrix(int size) {
-  SetRandomSeed(42);
   std::vector<std::vector<T>> result(size, std::vector<T>(size));
   for (int i = 0; i < size; ++i) {
     for (int j = 0; j < size; ++j) {
       result[i][j] = Random<T>();
     }
+  }
+  return result;
+}
+
+template<class T>
+requires std::is_floating_point_v<T> || std::is_integral_v<T>
+std::vector<std::vector<T>> RandomDiagonalMatrix(int size) {
+  std::vector<std::vector<T>> result(size, std::vector<T>(size, 0));
+  for (int i = 0; i < size; ++i) {
+    result[i][i] = Random<T>();
   }
   return result;
 }
