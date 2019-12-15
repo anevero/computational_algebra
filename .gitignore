@@ -5,3 +5,4 @@ cmake-build-debug/
 cmake-build-release/
 cpplint_light.py
 CMakeSettings.json
+test_main.cpp
