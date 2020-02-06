@@ -45,7 +45,7 @@ using matrix_utils::Equal;
 template<class T>
 concept MatrixNumber = std::is_floating_point_v<T>;
 
-template<class T> requires MatrixNumber<T>
+template<MatrixNumber T>
 class Matrix {
  public:
   struct Eigenvector {
@@ -466,8 +466,7 @@ class Matrix {
   std::optional<T> condition_number_ = std::nullopt;
 };
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
     : matrix_(std::move(matrix)),
       epsilon_(epsilon) {
@@ -481,16 +480,14 @@ Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
   columns_ = matrix_[0].size();
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T>::Matrix() : Matrix({{0}}) {
 }
 
 // ---------------------------------------------------------------------------
 // Comparison operators.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 bool Matrix<T>::operator==(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) return false;
   auto max_epsilon = std::max(epsilon_, other.epsilon_);
@@ -504,8 +501,7 @@ bool Matrix<T>::operator==(const Matrix& other) const {
   return true;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 bool Matrix<T>::operator!=(const Matrix& other) const {
   return !operator==(other);
 }
@@ -513,8 +509,7 @@ bool Matrix<T>::operator!=(const Matrix& other) const {
 // ---------------------------------------------------------------------------
 // Arithmetic operators.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
@@ -530,8 +525,7 @@ Matrix<T> Matrix<T>::operator+(const Matrix& other) const {
   return result;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
   if (rows_ != other.rows_ || columns_ != other.columns_) {
     throw std::runtime_error(
@@ -547,8 +541,7 @@ Matrix<T> Matrix<T>::operator-(const Matrix& other) const {
   return result;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
   if (columns_ != other.rows_) {
     throw std::runtime_error(
@@ -588,8 +581,7 @@ Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
   return Matrix<T>(result, std::max(epsilon_, other.epsilon_));
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::operator*(T number) const {
   Matrix<T> result(matrix_, epsilon_);
   for (int i = 0; i < rows_; ++i) {
@@ -600,8 +592,7 @@ Matrix<T> Matrix<T>::operator*(T number) const {
   return result;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::operator/(T number) const {
   Matrix<T> result(matrix_, epsilon_);
   for (int i = 0; i < rows_; ++i) {
@@ -620,8 +611,7 @@ Matrix<U> operator*(U number, const Matrix<U>& matrix) {
 // ---------------------------------------------------------------------------
 // Printing the matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::string Matrix<T>::ToString() const {
   std::stringstream stream;
   stream << '[';
@@ -653,8 +643,7 @@ std::ostream& operator<<(std::ostream& out, const Matrix<U>& matrix) {
 // ---------------------------------------------------------------------------
 // Matrix norm functions.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountNorm() {
   norm_ = 0;
   for (int i = 0; i < rows_; ++i) {
@@ -666,14 +655,12 @@ void Matrix<T>::CountNorm() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::optional<T> Matrix<T>::GetNorm() const {
   return norm_;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 T Matrix<T>::CountAndGetNorm() {
   if (!norm_.has_value()) {
     CountNorm();
@@ -684,26 +671,22 @@ T Matrix<T>::CountAndGetNorm() {
 // ---------------------------------------------------------------------------
 // Getters.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 int Matrix<T>::GetNumberOfRows() const {
   return rows_;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 int Matrix<T>::GetNumberOfColumns() const {
   return columns_;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 T Matrix<T>::GetEpsilon() const {
   return epsilon_;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::vector<std::vector<T>> Matrix<T>::GetMatrixAsVector() const {
   return matrix_;
 }
@@ -712,8 +695,7 @@ std::vector<std::vector<T>> Matrix<T>::GetMatrixAsVector() const {
 // TLU decomposition, solving systems of linear equations, counting the inverse
 // matrix and the condition number for ANY matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountTluDecomposition() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -777,8 +759,7 @@ void Matrix<T>::CountTluDecomposition() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -819,8 +800,7 @@ Matrix<T> Matrix<T>::SolveSystem(Matrix<T> b) {
   return b;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountInverseMatrix() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition();
@@ -870,8 +850,7 @@ void Matrix<T>::CountInverseMatrix() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountConditionNumber() {
   if (inverse_matrix_.empty()) {
     CountInverseMatrix();
@@ -898,8 +877,7 @@ void Matrix<T>::CountConditionNumber() {
 // TLU decomposition, solving systems of linear equations, counting the inverse
 // matrix for the ALMOST TRIANGULAR matrix (look at the task 1 conditions).
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 bool Matrix<T>::IsAlmostTriangular() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
@@ -910,8 +888,7 @@ bool Matrix<T>::IsAlmostTriangular() const {
   return true;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -957,8 +934,7 @@ void Matrix<T>::CountTluDecomposition_AlmostTriangular() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::SolveSystem_AlmostTriangular(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -993,8 +969,7 @@ Matrix<T> Matrix<T>::SolveSystem_AlmostTriangular(Matrix<T> b) {
   return b;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition_AlmostTriangular();
@@ -1045,8 +1020,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
   if (L_matrix_TLU_.empty()) {
     CountTluDecomposition_AlmostTriangular();
@@ -1066,8 +1040,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_Tlu_SingleThread() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
   int size = rows_;
   auto a_matrix = matrix_;
@@ -1179,8 +1152,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountInverseMatrix_AlmostTriangular_SingleThread() {
   int size = rows_;
   auto a_matrix = matrix_;
@@ -1233,8 +1205,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular_SingleThread() {
 // LDL decomposition, solving systems of linear equations for the SYMMETRIC
 // matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 bool Matrix<T>::IsSymmetric() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
@@ -1245,8 +1216,7 @@ bool Matrix<T>::IsSymmetric() const {
   return true;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetTranspose() const {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1262,8 +1232,7 @@ Matrix<T> Matrix<T>::GetTranspose() const {
   return Matrix(transpose_matrix, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountLdlDecomposition_Symmetric() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1317,8 +1286,7 @@ void Matrix<T>::CountLdlDecomposition_Symmetric() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
   if (columns_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -1360,14 +1328,12 @@ Matrix<T> Matrix<T>::SolveSystem_Symmetric(Matrix<T> b) {
 // ---------------------------------------------------------------------------
 // Solving systems of linear equations for the TRIDIAGONAL matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 bool Matrix<T>::IsTridiagonal() const {
   return (columns_ == 3);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
   std::vector<std::vector<T>> result(rows_, std::vector<T>(rows_, 0));
   for (int i = 0; i < rows_; ++i) {
@@ -1382,8 +1348,7 @@ Matrix<T> Matrix<T>::GetTridiagonalMatrixAsNormal() const {
   return Matrix(result);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
   if (rows_ != b.GetNumberOfRows() || b.GetNumberOfColumns() != 1) {
     throw std::invalid_argument("B is not a proper vector for this matrix.");
@@ -1442,8 +1407,7 @@ Matrix<T> Matrix<T>::SolveSystem_Tridiagonal(Matrix<T> b) const {
 // ---------------------------------------------------------------------------
 // QR decomposition for any matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::MultiplyMatrixByRotation_Left(
     std::vector<std::vector<T>>* matrix, T sin, T cos,
     int i, int j, int size) const {
@@ -1467,8 +1431,7 @@ void Matrix<T>::MultiplyMatrixByRotation_Left(
   (*matrix)[i] = std::move(new_i_row);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::MultiplyMatrixByRotation_Right(
     std::vector<std::vector<T>>* matrix, T sin, T cos,
     int i, int j, int size) const {
@@ -1490,8 +1453,7 @@ void Matrix<T>::MultiplyMatrixByRotation_Right(
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountQrDecomposition() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1536,8 +1498,7 @@ void Matrix<T>::CountQrDecomposition() {
 // ---------------------------------------------------------------------------
 // QR algorithm for any matrix (based on upper Hessenberg matrices).
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountUpperHessenbergMatrix() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1581,8 +1542,7 @@ void Matrix<T>::CountUpperHessenbergMatrix() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::RunQRAlgorithmIteration() {
   int size = rows_;
   std::vector<std::tuple<T, T, int, int>> rotation_matrices_;
@@ -1630,8 +1590,7 @@ void Matrix<T>::RunQRAlgorithmIteration() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
   int size = rows_;
 
@@ -1681,8 +1640,7 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::vector<typename Matrix<T>::Eigenvector>
 Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
   int size = rows_;
@@ -1728,8 +1686,7 @@ Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
 // ---------------------------------------------------------------------------
 // Danilevsky algorithm for any matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountFrobeniusMatrix() {
   if (rows_ != columns_) {
     throw std::runtime_error("Matrix is not square.");
@@ -1805,8 +1762,7 @@ void Matrix<T>::CountFrobeniusMatrix() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::CountCharacteristicPolynomial() {
   if (frobenius_matrix_.empty()) {
     CountFrobeniusMatrix();
@@ -1841,14 +1797,12 @@ void Matrix<T>::CountCharacteristicPolynomial() {
   }
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 void Matrix<T>::FindCharacteristicPolynomialRoots() {
   characteristic_polynomial_.FindRoots();
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::vector<typename Matrix<T>::Eigenvector>
 Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
   std::vector<Eigenvector> result;
@@ -1872,8 +1826,7 @@ Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
 // ---------------------------------------------------------------------------
 // Power iteration algorithm for any matrix.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::vector<typename Matrix<T>::Eigenvector>
 Matrix<T>::GetPowerIterationResults(T epsilon,
                                     int max_number_of_iterations) const {
@@ -1964,20 +1917,17 @@ Matrix<T>::GetPowerIterationResults(T epsilon,
 // Getters for the results of TLU, LDL, QR decompositions, counting the
 // inverse matrix and the condition number, etc.
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetLMatrix_TLU() const {
   return Matrix(L_matrix_TLU_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetUMatrix_TLU() const {
   return Matrix(U_matrix_TLU_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetTMatrix_TLU() const {
   int size = rows_;
   std::vector<std::vector<T>> t_matrix(size, std::vector<T>(size, 0));
@@ -1987,8 +1937,7 @@ Matrix<T> Matrix<T>::GetTMatrix_TLU() const {
   return Matrix(t_matrix, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetTInverseMatrix_TLU() const {
   int size = rows_;
   std::vector<std::vector<T>> d_inverse_matrix(size, std::vector<T>(size, 0));
@@ -1998,14 +1947,12 @@ Matrix<T> Matrix<T>::GetTInverseMatrix_TLU() const {
   return Matrix(d_inverse_matrix, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetLTMatrix_LDL() const {
   return Matrix(LT_matrix_LDL_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetDMatrix_LDL() const {
   int size = rows_;
   std::vector<std::vector<T>> d_matrix(size, std::vector<T>(size, 0));
@@ -2015,50 +1962,42 @@ Matrix<T> Matrix<T>::GetDMatrix_LDL() const {
   return Matrix(d_matrix, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetQMatrix_QR() const {
   return Matrix(Q_matrix_QR_, epsilon_).GetTranspose();
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetRMatrix_QR() const {
   return Matrix(R_matrix_QR_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetUpperHessenbergMatrix() const {
   return Matrix(hessenberg_matrix_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetFrobeniusMatrix() const {
   return Matrix(frobenius_matrix_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Polynomial<T> Matrix<T>::GetCharacteristicPolynomial() const {
   return characteristic_polynomial_;
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::vector<T> Matrix<T>::GetCharacteristicPolynomialRealRoots() const {
   return characteristic_polynomial_.GetRoots();
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 Matrix<T> Matrix<T>::GetInverseMatrix() const {
   return Matrix(inverse_matrix_, epsilon_);
 }
 
-template<class T>
-requires MatrixNumber<T>
+template <MatrixNumber T>
 std::optional<T> Matrix<T>::GetConditionNumber() const {
   return condition_number_;
 }
