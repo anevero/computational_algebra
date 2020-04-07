@@ -4,7 +4,7 @@ namespace matrix::matrix_utils {
 
 void DataOutput::Task1_RandomInput() {
   auto results = matrix_tasks::Task1<double>::RandomInput();
-  std::fstream out;
+  std::ofstream out;
   out << std::fixed << std::setprecision(7);
 
   out.open("1_time_common_f.txt");
@@ -64,7 +64,7 @@ void DataOutput::Task1_RandomInput() {
 
 void DataOutput::Task1_SingleVsMultiThread() {
   auto results = matrix_tasks::Task1<double>::SingleVsMultiThread();
-  std::fstream out;
+  std::ofstream out;
   out << std::fixed << std::setprecision(7);
 
   out.open("1_time_thread_single_tlu.txt");
@@ -94,7 +94,7 @@ void DataOutput::Task1_SingleVsMultiThread() {
 
 void DataOutput::Task2_RandomBForSecondMatrix() {
   auto results = matrix_tasks::Task2<double>::RandomBForSecondMatrix();
-  std::fstream out;
+  std::ofstream out;
   out << std::fixed << std::setprecision(10);
 
   out.open("2_fault_f.txt");
@@ -118,7 +118,7 @@ void DataOutput::Task2_RandomBForSecondMatrix() {
 
 void DataOutput::Task3_RandomInput() {
   auto results = matrix_tasks::Task3<double>::RandomInput();
-  std::fstream out;
+  std::ofstream out;
   out << std::fixed << std::setprecision(5);
 
   out.open("3_time_tlu.txt");
@@ -136,7 +136,7 @@ void DataOutput::Task3_RandomInput() {
 
 void DataOutput::Task5_DifferentOmegas() {
   auto result = matrix_tasks::Task5<double>::GetTime(0.8, 1.2);
-  std::fstream out;
+  std::ofstream out;
 
   for (int i = 0; i < 3; ++i) {
     out.open("5_omega" + std::to_string(i) + ".txt");

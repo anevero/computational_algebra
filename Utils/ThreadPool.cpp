@@ -58,7 +58,7 @@ void ThreadPool::StartWorkers() {
 
 std::function<void()> ThreadPool::GetNextTask() {
   std::unique_lock<std::mutex> lock(mutex_);
-  for (;;) {
+  while (true) {
     if (!tasks_.empty()) {
       std::function<void()> task = tasks_.front();
       tasks_.pop_front();
@@ -70,9 +70,8 @@ std::function<void()> ThreadPool::GetNextTask() {
     }
     if (waiting_to_finish_) {
       return nullptr;
-    } else {
-      condition_.wait(lock);
     }
+    condition_.wait(lock);
   }
   return nullptr;
 }

@@ -40,7 +40,7 @@ class ThreadPool {
   const int num_workers_;
 
   std::list<std::function<void()>> tasks_;
-  int queue_capacity_ = 2e9;
+  int queue_capacity_ = 2'000'000'000;
 
   std::mutex mutex_;
   std::condition_variable condition_;

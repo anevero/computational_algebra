@@ -45,6 +45,5 @@ on Windows).
 * Some C++2a features are used inside the project (for example, concepts), so
 you need some modern compiler to build it. clang++-10 was used to create
 this solution (with CLion IDE, which supports C++2a concepts feature), so
-it's recommended to work with it (but other compilers can still be used, if
-they support necessary features).
-
+it's recommended to work with it (but other compilers, like gcc-10, can still
+be used, if they support necessary features).

@@ -107,24 +107,24 @@ class Polynomial {
   T epsilon_;
 };
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T>::Polynomial(std::vector<T> coefficients, T epsilon)
     : coefficients_(std::move(coefficients)), epsilon_(epsilon) {
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T>::Polynomial() : Polynomial({0}) {
 }
 
 // ---------------------------------------------------------------------------
 // Comparison operators.
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 bool Polynomial<T>::operator==(const Polynomial& other) const {
   return (coefficients_ == other.coefficients_);
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 bool Polynomial<T>::operator!=(const Polynomial& other) const {
   return !operator==(other);
 }
@@ -132,7 +132,7 @@ bool Polynomial<T>::operator!=(const Polynomial& other) const {
 // ---------------------------------------------------------------------------
 // Arithmetic operators.
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::operator+(const Polynomial& other) const {
   if (other.coefficients_.size() > coefficients_.size()) {
     return other + (*this);
@@ -154,7 +154,7 @@ Polynomial<T> Polynomial<T>::operator+(const Polynomial& other) const {
   return result;
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::operator-(const Polynomial& other) const {
   if (other.coefficients_.size() > coefficients_.size()) {
     return other + (*this);
@@ -176,7 +176,7 @@ Polynomial<T> Polynomial<T>::operator-(const Polynomial& other) const {
   return result;
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::operator*(const Polynomial& other) const {
   std::vector<T> result(coefficients_.size() * other.coefficients_.size(), 0);
   int this_degree = coefficients_.size();
@@ -194,7 +194,7 @@ Polynomial<T> Polynomial<T>::operator*(const Polynomial& other) const {
   return Polynomial(result, std::max(epsilon_, other.epsilon_));
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::operator*(T number) const {
   return operator*(Polynomial({number}));
 }
@@ -207,7 +207,7 @@ Polynomial<U> operator*(U number, const Polynomial<U>& polynomial) {
 // ---------------------------------------------------------------------------
 // More difficult functions.
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 T Polynomial<T>::GetValue(T x) const {
   T value = T();
   T current_degree = 1;
@@ -219,7 +219,7 @@ T Polynomial<T>::GetValue(T x) const {
   return value;
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::Differentiate() const {
   if (coefficients_.size() == 1) {
     return Polynomial({T()}, epsilon_);
@@ -235,7 +235,7 @@ Polynomial<T> Polynomial<T>::Differentiate() const {
 // ---------------------------------------------------------------------------
 // Searching for the roots.
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 std::tuple<T, T> Polynomial<T>::RunBisectionAlgorithm(T left_border,
                                                       T right_border,
                                                       T epsilon) const {
@@ -253,7 +253,7 @@ std::tuple<T, T> Polynomial<T>::RunBisectionAlgorithm(T left_border,
   return {left_border, right_border};
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 std::optional<T> Polynomial<T>::RunNewtonAlgorithm(
     T left_border, T right_border, T epsilon,
     int max_number_of_iterations) const {
@@ -293,7 +293,7 @@ std::optional<T> Polynomial<T>::RunNewtonAlgorithm(
   return current_point;
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 void Polynomial<T>::FindRoots() {
   if (coefficients_.size() == 1) {
     return;
@@ -353,15 +353,19 @@ void Polynomial<T>::FindRoots() {
   }
 }
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 std::vector<T> Polynomial<T>::GetRoots() const {
+  if (real_roots_.empty()) {
+    std::clog << "Empty vector of roots. Have you called 'Find Roots' method?"
+              << std::endl;
+  }
   return real_roots_;
 }
 
 // ---------------------------------------------------------------------------
 // Printing the polynomial.
 
-template <PolynomialCoefficient T>
+template<PolynomialCoefficient T>
 std::string Polynomial<T>::ToString() const {
   if (coefficients_.size() == 1) {
     return std::to_string(coefficients_[0]);
