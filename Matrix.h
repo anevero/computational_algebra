@@ -493,7 +493,7 @@ bool Matrix<T>::operator==(const Matrix& other) const {
   auto max_epsilon = std::max(epsilon_, other.epsilon_);
   for (int i = 0; i < rows_; ++i) {
     for (int j = 0; j < columns_; ++j) {
-      if (std::abs(matrix_[i][j] - other.matrix_[i][j]) >= max_epsilon) {
+      if (!Equal(matrix_[i][j], other.matrix_[i][j], max_epsilon)) {
         return false;
       }
     }

@@ -11,7 +11,10 @@
 // located below.
 
 #include <algorithm>
+#include <cmath>
+#include <iomanip>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -60,6 +63,9 @@ class Polynomial {
 
   // This function returns f(x).
   T GetValue(T x) const;
+
+  // This function also returns f(x).
+  T operator()(T x) const;
 
   // This function returns derivative.
   Polynomial Differentiate() const;
@@ -121,7 +127,15 @@ Polynomial<T>::Polynomial() : Polynomial({0}) {
 
 template<PolynomialCoefficient T>
 bool Polynomial<T>::operator==(const Polynomial& other) const {
-  return (coefficients_ == other.coefficients_);
+  if (coefficients_.size() != other.coefficients_.size()) return false;
+  auto max_epsilon = std::max(epsilon_, other.epsilon_);
+  int n = coefficients_.size();
+  for (int i = 0; i < n; ++i) {
+    if (!Equal(coefficients_[i], other.coefficients_[i], max_epsilon)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template<PolynomialCoefficient T>
@@ -220,6 +234,11 @@ T Polynomial<T>::GetValue(T x) const {
 }
 
 template<PolynomialCoefficient T>
+T Polynomial<T>::operator()(T x) const {
+  return GetValue(x);
+}
+
+template<PolynomialCoefficient T>
 Polynomial<T> Polynomial<T>::Differentiate() const {
   if (coefficients_.size() == 1) {
     return Polynomial({T()}, epsilon_);
@@ -271,10 +290,9 @@ std::optional<T> Polynomial<T>::RunNewtonAlgorithm(
   }
 
   T previous_point;
-  if (GetValue(left_border) * second_derivative.GetValue(left_border) > T()) {
+  if (GetValue(left_border) * second_derivative(left_border) > T()) {
     previous_point = left_border;
-  } else if (GetValue(right_border) * second_derivative.GetValue(right_border)
-      > T()) {
+  } else if (GetValue(right_border) * second_derivative(right_border) > T()) {
     previous_point = right_border;
   } else {
     return std::nullopt;
@@ -285,8 +303,7 @@ std::optional<T> Polynomial<T>::RunNewtonAlgorithm(
   do {
     ++number_of_iterations;
     previous_point = current_point;
-    current_point -=
-        GetValue(current_point) / derivative.GetValue(current_point);
+    current_point -= GetValue(current_point) / derivative(current_point);
   } while (number_of_iterations < max_number_of_iterations &&
       std::abs(std::abs(current_point) - std::abs(previous_point)) > epsilon);
 
@@ -367,30 +384,30 @@ std::vector<T> Polynomial<T>::GetRoots() const {
 
 template<PolynomialCoefficient T>
 std::string Polynomial<T>::ToString() const {
+  std::ostringstream out;
+  out << std::fixed << std::setprecision(-std::log10(epsilon_));
+
   if (coefficients_.size() == 1) {
-    return std::to_string(coefficients_[0]);
+    out << coefficients_[0];
+    return out.str();
   }
 
-  std::string result = {};
   int degree = coefficients_.size();
   for (int i = degree - 1; i >= 0; --i) {
     if (Equal(coefficients_[i], T(), epsilon_)) continue;
     if (i != degree - 1) {
-      result += " ";
-      result += (coefficients_[i] > 0) ? "+" : "-";
-      result += " ";
-      result += std::to_string(std::abs(coefficients_[i]));
+      out << " " << ((coefficients_[i] > 0) ? "+" : "-") << " "
+          << std::abs(coefficients_[i]);
     } else {
-      result += std::to_string(coefficients_[i]);
+      out << coefficients_[i];
     }
     if (i == 0) continue;
-    result += "x";
+    out << "x";
     if (i == 1) continue;
-    result += "^{";
-    result += std::to_string(i);
-    result += "}";
+    out << "^{" << i << "}";
   }
-  return result;
+
+  return out.str();
 }
 
 template<class U>
