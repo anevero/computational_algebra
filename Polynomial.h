@@ -33,7 +33,7 @@ template<PolynomialCoefficient T>
 class Polynomial {
  public:
   // Coefficients vector [a_0, a_1, ..., a_n] represents polynomial
-  // a_0 x^{n} + a_1 x^{n - 1} + ... + a_{n - 1} x + a_n.
+  // a_n x^{n} + a_{n - 1} x^{n - 1} + ... + a_1 x + a_0.
   explicit Polynomial(std::vector<T> coefficients,
                       T epsilon = std::numeric_limits<T>::epsilon());
   // Default constructor initializes polynomial with 0 value and minimum
