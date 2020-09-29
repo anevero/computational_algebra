@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include "Utils/Utils.h"
+#include "utils/utils.h"
 
 namespace polynomial {
 
@@ -42,7 +42,7 @@ class Polynomial {
   ~Polynomial() = default;
 
 // ---------------------------------------------------------------------------
-// Comparison operators. Use predefined epsilons and Equal function from Utils
+// Comparison operators. Use predefined epsilons and Equal function from utils
 // to compare small floating point values properly.
 
   bool operator==(const Polynomial& other) const;
@@ -127,7 +127,9 @@ Polynomial<T>::Polynomial() : Polynomial({0}) {
 
 template<PolynomialCoefficient T>
 bool Polynomial<T>::operator==(const Polynomial& other) const {
-  if (coefficients_.size() != other.coefficients_.size()) return false;
+  if (coefficients_.size() != other.coefficients_.size()) {
+    return false;
+  }
   auto max_epsilon = std::max(epsilon_, other.epsilon_);
   int n = coefficients_.size();
   for (int i = 0; i < n; ++i) {
@@ -243,7 +245,7 @@ Polynomial<T> Polynomial<T>::Differentiate() const {
   if (coefficients_.size() == 1) {
     return Polynomial({T()}, epsilon_);
   }
-  std::vector<T> result(coefficients_.size() - 1, T());
+  std::vector<T> result(coefficients_.size() - 1, 0);
   int degree = coefficients_.size();
   for (int i = 1; i < degree; ++i) {
     result[i - 1] = i * coefficients_[i];
@@ -338,19 +340,19 @@ void Polynomial<T>::FindRoots() {
   derivative.FindRoots();
   auto derivative_roots = derivative.GetRoots();
 
-  std::vector<T> brackets = {-1000000000};
+  std::vector<T> borders = {-1000000000};
   std::copy(derivative_roots.begin(), derivative_roots.end(),
-            std::back_inserter(brackets));
-  brackets.push_back(1000000000);
-  std::sort(brackets.begin(), brackets.end());
+            std::back_inserter(borders));
+  borders.push_back(1000000000);
+  std::sort(borders.begin(), borders.end());
 
   std::vector<std::tuple<T, T>> intervals;
-  int number_of_intervals = brackets.size() - 1;
+  int number_of_intervals = borders.size() - 1;
   for (int i = 0; i < number_of_intervals; ++i) {
-    intervals.emplace_back(brackets[i], brackets[i + 1]);
+    intervals.emplace_back(borders[i], borders[i + 1]);
   }
 
-  T bisection_epsilon = 0.01;
+  const T bisection_epsilon = 0.01;
   for (auto& interval : intervals) {
     interval = RunBisectionAlgorithm(std::get<0>(interval),
                                      std::get<1>(interval),

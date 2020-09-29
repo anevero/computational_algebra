@@ -5,7 +5,7 @@
 // std::is_floating_point<T> condition.
 // A constructor from the two-dimensional vector is provided, as well as
 // comparison operators (equal and not equal), sum, difference and product
-// operators. << operator is overloaded for printing matrices.
+// operators. << operator is overloaded for printing matrixes.
 // Methods for counting TLU / LDL / QR decomposition, solving systems of linear
 // equations, counting an inverse matrix and counting a condition number,
 // searching for eigenvalues and eigenvectors are implemented.
@@ -32,9 +32,9 @@
 #include <utility>
 #include <vector>
 
-#include "Polynomial.h"
-#include "Utils/ThreadPool.h"
-#include "Utils/Utils.h"
+#include "polynomial.h"
+#include "utils/thread_pool.h"
+#include "utils/utils.h"
 
 namespace matrix {
 
@@ -61,7 +61,7 @@ class Matrix {
   ~Matrix() = default;
 
 // ---------------------------------------------------------------------------
-// Comparison operators. Use predefined epsilons and Equal function from Utils
+// Comparison operators. Use predefined epsilons and Equal function from utils
 // to compare small floating point values properly.
 
   bool operator==(const Matrix& other) const;
@@ -128,7 +128,7 @@ class Matrix {
 // TLU decomposition, solving systems of linear equations, counting the inverse
 // matrix for the ALMOST TRIANGULAR matrix (look at the task 1 conditions).
 // Almost triangular matrix in this task is a lower Hessenberg matrix.
-// There're two ways for counting the inverse matrix. The both have pros and
+// There are two ways for counting the inverse matrix. The both have pros and
 // cons, which are described in the report.
 // CountInverseMatrix_AlmostTriangular_TLU counts the inverse matrix using
 // the optimized algorithm for TLU decomposition.
@@ -404,6 +404,7 @@ class Matrix {
 // ---------------------------------------------------------------------------
 // Variables connected with TLU decomposition.
 
+  // TODO(anevero): one vector is enough to store both L and U matrixes.
   std::vector<std::vector<T>> L_matrix_TLU_{};
   std::vector<std::vector<T>> U_matrix_TLU_{};
   // Can be used while solving systems: AX = B will be equal to LU = TB.
@@ -481,15 +482,16 @@ Matrix<T>::Matrix(std::vector<std::vector<T>> matrix, T epsilon)
 }
 
 template<MatrixNumber T>
-Matrix<T>::Matrix() : Matrix({{0}}) {
-}
+Matrix<T>::Matrix() : Matrix({{0}}) {}
 
 // ---------------------------------------------------------------------------
 // Comparison operators.
 
 template<MatrixNumber T>
 bool Matrix<T>::operator==(const Matrix& other) const {
-  if (rows_ != other.rows_ || columns_ != other.columns_) return false;
+  if (rows_ != other.rows_ || columns_ != other.columns_) {
+    return false;
+  }
   auto max_epsilon = std::max(epsilon_, other.epsilon_);
   for (int i = 0; i < rows_; ++i) {
     for (int j = 0; j < columns_; ++j) {
@@ -563,9 +565,11 @@ Matrix<T> Matrix<T>::operator*(const Matrix& other) const {
         [this, &result, &other, current_row, rows_per_thread]() {
           for (int r = current_row; r < current_row + rows_per_thread; ++r) {
             for (int j = 0; j < other.columns_; ++j) {
+              T value = 0;
               for (int k = 0; k < columns_; ++k) {
-                result[r][j] += matrix_[r][k] * other.matrix_[k][j];
+                value += matrix_[r][k] * other.matrix_[k][j];
               }
+              result[r][j] = value;
             }
           }
         });
@@ -614,6 +618,7 @@ Matrix<U> operator*(U number, const Matrix<U>& matrix) {
 template<MatrixNumber T>
 std::string Matrix<T>::ToString() const {
   std::stringstream stream;
+  stream << std::fixed << std::setprecision(-std::log10(epsilon_));
   stream << '[';
   for (int i = 0; i < rows_; ++i) {
     if (i != 0) {
@@ -743,7 +748,7 @@ void Matrix<T>::CountTluDecomposition() {
     }
 
     // Updating current column in L matrix. Takes O(n) time.
-    auto multiplier = U_matrix_TLU_[i][i];
+    T multiplier = U_matrix_TLU_[i][i];
     for (int j = i; j < size; ++j) {
       L_matrix_TLU_[j][i] = U_matrix_TLU_[j][i] / multiplier;
     }
@@ -882,7 +887,9 @@ bool Matrix<T>::IsAlmostTriangular() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
     for (int j = i + 2; j < columns_; ++j) {
-      if (matrix_[i][j] != 0) return false;
+      if (matrix_[i][j] != 0) {
+        return false;
+      }
     }
   }
   return true;
@@ -1091,7 +1098,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
     // Lock the thread until all the subtraction operations from the previous
     // iterations won't be completed.
     {
-      std::unique_lock<std::mutex> locker(mutex);
+      std::unique_lock locker(mutex);
       rows_completed_cv.wait(locker, [this, &rows_completed]() {
         return (rows_completed == rows_);
       });
@@ -1120,7 +1127,7 @@ void Matrix<T>::CountInverseMatrix_AlmostTriangular() {
               }
             }
             {
-              std::lock_guard<std::mutex> locker(mutex);
+              std::lock_guard locker(mutex);
               rows_completed += rows_per_thread;
               rows_completed_cv.notify_one();
             }
@@ -1210,7 +1217,9 @@ bool Matrix<T>::IsSymmetric() const {
   if (rows_ != columns_) return false;
   for (int i = 0; i < rows_; ++i) {
     for (int j = 0; j <= i; ++j) {
-      if (matrix_[i][j] != matrix_[j][i]) return false;
+      if (matrix_[i][j] != matrix_[j][i]) {
+        return false;
+      }
     }
   }
   return true;
@@ -1614,8 +1623,8 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
       && number_of_iterations < max_number_of_iterations) {
     RunQRAlgorithmIteration();
     ++number_of_iterations;
-
     one_more_iteration = false;
+
     for (int i = 0; i < size; ++i) {
       if (!one_more_iteration &&
           std::abs(previous_diagonal_values[i] - hessenberg_matrix_[i][i])
@@ -1624,6 +1633,7 @@ void Matrix<T>::RunQrAlgorithm(T epsilon, int max_number_of_iterations) {
       }
       previous_diagonal_values[i] = hessenberg_matrix_[i][i];
     }
+
     for (int i = 1; i < size; ++i) {
       if (!one_more_iteration && std::abs(
           previous_left_diagonal_values[i - 1] - hessenberg_matrix_[i][i - 1])
@@ -1666,17 +1676,14 @@ Matrix<T>::GetEigenvectorsFromHessenbergMatrix(T epsilon) const {
       T imaginary_part =
           std::sqrt(4 * a * d - 4 * b * c - (a + d) * (a + d)) / 2;
 
-      result.push_back(
-          {get_ith_column(hessenberg_rotation_matrix_, i),
-           {real_part, imaginary_part}});
-      result.push_back(
-          {get_ith_column(hessenberg_rotation_matrix_, i + 1),
-           {real_part, -imaginary_part}});
+      result.emplace_back(get_ith_column(hessenberg_rotation_matrix_, i),
+                          {real_part, imaginary_part});
+      result.emplace_back(get_ith_column(hessenberg_rotation_matrix_, i + 1),
+                          {real_part, -imaginary_part});
       ++i;
     } else {
-      result.push_back(
-          {get_ith_column(hessenberg_rotation_matrix_, i),
-           {hessenberg_matrix_[i][i], 0}});
+      result.emplace_back(get_ith_column(hessenberg_rotation_matrix_, i),
+                          {hessenberg_matrix_[i][i], 0});
     }
   }
 
@@ -1707,7 +1714,7 @@ void Matrix<T>::CountFrobeniusMatrix() {
   while (current_row > 0) {
     int non_zero_column = current_column;
     while (non_zero_column >= 0 && Equal(
-        frobenius_matrix_[current_row][non_zero_column], T(), epsilon_)) {
+        frobenius_matrix_[current_row][non_zero_column], 0, epsilon_)) {
       --non_zero_column;
     }
     if (non_zero_column == -1) {
@@ -1816,8 +1823,8 @@ Matrix<T>::GetEigenvectorsFromFrobeniusMatrix() const {
       eigenvector[i][0] = current_eigenvalue_degree;
       current_eigenvalue_degree *= eigenvalue;
     }
-    result.push_back({transition_matrix * Matrix(eigenvector),
-                      eigenvalue});
+    result.emplace_back(transition_matrix * Matrix(eigenvector),
+                        eigenvalue);
   }
 
   return result;

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-#include "../Matrix.h"
+#include "../matrix.h"
 
 namespace matrix::matrix_tasks {
 

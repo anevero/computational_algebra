@@ -14,8 +14,8 @@
 // Source:
 // https://github.com/google/or-tools/blob/v7.4/ortools/base/threadpool.h
 
-#ifndef UTILS_THREADPOOL_H_
-#define UTILS_THREADPOOL_H_
+#ifndef UTILS_THREAD_POOL_H_
+#define UTILS_THREAD_POOL_H_
 
 #include <condition_variable>
 #include <functional>
@@ -28,31 +28,25 @@ namespace matrix::matrix_utils {
 
 class ThreadPool {
  public:
-  explicit ThreadPool(int num_threads);
+  explicit ThreadPool(int number_of_threads);
   ~ThreadPool();
 
   void StartWorkers();
   void Schedule(const std::function<void()>& closure);
   std::function<void()> GetNextTask();
-  void SetQueueCapacity(int capacity);
 
  private:
-  const int num_workers_;
-
+  const int number_of_workers_;
+  std::vector<std::thread> all_workers_;
   std::list<std::function<void()>> tasks_;
-  int queue_capacity_ = 2'000'000'000;
 
   std::mutex mutex_;
   std::condition_variable condition_;
-  std::condition_variable capacity_condition_;
 
   bool waiting_to_finish_ = false;
-  bool waiting_for_capacity_ = false;
   bool started_ = false;
-
-  std::vector<std::thread> all_workers_;
 };
 
 }  // namespace matrix::matrix_utils
 
-#endif  // UTILS_THREADPOOL_H_
+#endif  // UTILS_THREAD_POOL_H_

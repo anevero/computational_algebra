@@ -12,8 +12,8 @@
 #include <typeinfo>
 #include <vector>
 
-#include "../Matrix.h"
-#include "../Utils/Utils.h"
+#include "../matrix.h"
+#include "../utils/utils.h"
 
 namespace matrix::matrix_tasks {
 

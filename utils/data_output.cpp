@@ -1,4 +1,4 @@
-#include "DataOutput.h"
+#include "data_output.h"
 
 namespace matrix::matrix_utils {
 

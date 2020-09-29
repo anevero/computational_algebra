@@ -37,13 +37,9 @@ of Jupyter Notebooks (the Russian language is used there).
 
 ## Notes
 
-* The project was created and tested on Linux-based systems. There are no
-guarantees that it will work correctly in Windows (in particular,
-multithreading features may work incorrectly when using the MinGW compiler 
-on Windows).
+* The project was created and tested on Linux-based systems.
 
-* Some C++2a features are used inside the project (for example, concepts), so
+* Some C++20 features are used inside the project (for example, concepts), so
 you need some modern compiler to build it. clang++-10 was used to create
-this solution (with CLion IDE, which supports C++2a concepts feature), so
-it's recommended to work with it (but other compilers, like gcc-10, can still
-be used, if they support necessary features).
+this solution, so it's recommended to work with it (but other compilers,
+like gcc-10, can still be used, if they support necessary features).

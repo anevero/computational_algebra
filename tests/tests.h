@@ -5,9 +5,9 @@
 #include <random>
 #include <vector>
 
-#include "../Matrix.h"
-#include "../Tasks/Task5.h"
-#include "../Utils/Utils.h"
+#include "../matrix.h"
+#include "../tasks/task5.h"
+#include "../utils/utils.h"
 
 // These tests should be run manually. Some of them can fail (it's expected
 // behaviour), so you'll need to check the failure message.

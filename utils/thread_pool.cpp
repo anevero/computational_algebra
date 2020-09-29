@@ -14,7 +14,7 @@
 // Source:
 // https://github.com/google/or-tools/blob/v7.4/ortools/base/threadpool.cc
 
-#include "ThreadPool.h"
+#include "thread_pool.h"
 
 namespace matrix::matrix_utils {
 
@@ -31,7 +31,8 @@ void RunWorker(void* data) {
 
 }  // namespace
 
-ThreadPool::ThreadPool(int num_workers) : num_workers_(num_workers) {}
+ThreadPool::ThreadPool(int number_of_threads)
+    : number_of_workers_(number_of_threads) {}
 
 ThreadPool::~ThreadPool() {
   if (!started_) return;
@@ -40,18 +41,14 @@ ThreadPool::~ThreadPool() {
     waiting_to_finish_ = true;
     condition_.notify_all();
   }
-  for (int i = 0; i < num_workers_; ++i) {
+  for (int i = 0; i < number_of_workers_; ++i) {
     all_workers_[i].join();
   }
 }
 
-void ThreadPool::SetQueueCapacity(int capacity) {
-  queue_capacity_ = capacity;
-}
-
 void ThreadPool::StartWorkers() {
   started_ = true;
-  for (int i = 0; i < num_workers_; ++i) {
+  for (int i = 0; i < number_of_workers_; ++i) {
     all_workers_.emplace_back(&RunWorker, this);
   }
 }
@@ -60,12 +57,8 @@ std::function<void()> ThreadPool::GetNextTask() {
   std::unique_lock<std::mutex> lock(mutex_);
   while (true) {
     if (!tasks_.empty()) {
-      std::function<void()> task = tasks_.front();
+      auto task = tasks_.front();
       tasks_.pop_front();
-      if (tasks_.size() < queue_capacity_ && waiting_for_capacity_) {
-        waiting_for_capacity_ = false;
-        capacity_condition_.notify_all();
-      }
       return task;
     }
     if (waiting_to_finish_) {
@@ -77,11 +70,7 @@ std::function<void()> ThreadPool::GetNextTask() {
 }
 
 void ThreadPool::Schedule(const std::function<void()>& closure) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  while (tasks_.size() >= queue_capacity_) {
-    waiting_for_capacity_ = true;
-    capacity_condition_.wait(lock);
-  }
+  std::lock_guard<std::mutex> lock(mutex_);
   tasks_.push_back(closure);
   if (started_) {
     condition_.notify_all();
